@@ -14,8 +14,11 @@ package com.redhat.che.selenium.core;
 import static com.google.inject.name.Names.named;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.inject.name.Named;
 import com.redhat.che.selenium.core.client.RhCheTestWorkspaceServiceClient;
+import com.redhat.che.selenium.core.workspace.ProvidedWorkspace;
 import com.redhat.che.selenium.core.workspace.RhCheTestWorkspaceProvider;
 import org.eclipse.che.selenium.core.client.TestWorkspaceServiceClient;
 import org.eclipse.che.selenium.core.client.TestWorkspaceServiceClientFactory;
@@ -40,5 +43,17 @@ public class RhCheSeleniumSuiteModule extends AbstractModule {
             .build(TestWorkspaceServiceClientFactory.class));
     bind(TestWorkspaceServiceClient.class).to(RhCheTestWorkspaceServiceClient.class);
     bind(TestWorkspaceProvider.class).to(RhCheTestWorkspaceProvider.class).asEagerSingleton();
+  }
+
+  @Provides
+  public ProvidedWorkspace getProvidedWorkspace(
+      RhCheTestWorkspaceProvider workspaceProvider,
+      DefaultTestUser testUser,
+      @Named("workspace.default_memory_gb") int defaultMemoryGb,
+      @Named("sys.workspaceName") String givenWorkspaceName)
+      throws Exception {
+    ProvidedWorkspace ws = workspaceProvider.findWorkspace(testUser, givenWorkspaceName);
+    ws.await();
+    return ws;
   }
 }

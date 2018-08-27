@@ -15,6 +15,13 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.redhat.che.selenium.core.workspace.CheStarterWrapper;
+import java.io.IOException;
+import org.eclipse.che.api.core.BadRequestException;
+import org.eclipse.che.api.core.ConflictException;
+import org.eclipse.che.api.core.ForbiddenException;
+import org.eclipse.che.api.core.NotFoundException;
+import org.eclipse.che.api.core.ServerException;
+import org.eclipse.che.api.core.UnauthorizedException;
 import org.eclipse.che.api.core.model.workspace.Workspace;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.core.rest.HttpJsonRequestFactory;
@@ -112,5 +119,17 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
       LOG.error("Failed to delete workspace \"" + workspaceName + "\": " + e.getMessage(), e);
       throw e;
     }
+  }
+
+  public Workspace findExistingWorkspace(String workspaceName)
+      throws ServerException, UnauthorizedException, ForbiddenException, NotFoundException,
+          ConflictException, BadRequestException, IOException {
+    if (owner == null) {
+      throw new IllegalStateException("Workspace does not have an owner.");
+    }
+    return requestFactory
+        .fromUrl(getNameBasedUrl(workspaceName, owner.getName()))
+        .request()
+        .asDto(WorkspaceDto.class);
   }
 }

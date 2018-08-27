@@ -65,6 +65,16 @@ public class RhCheTestWorkspaceProvider extends AbstractTestWorkspaceProvider {
             : null);
   }
 
+  public ProvidedWorkspace findWorkspace(TestUser owner, String name) {
+    this.cheStarterWrapper.checkIsRunning();
+    return new ProvidedWorkspace(
+        owner,
+        testWorkspaceServiceClient instanceof RhCheTestWorkspaceServiceClient
+            ? (RhCheTestWorkspaceServiceClient) testWorkspaceServiceClient
+            : null,
+        name);
+  }
+
   @Override
   protected void initializePool() {
     LOG.info("Initialize workspace pool with {} entries.", poolSize);
