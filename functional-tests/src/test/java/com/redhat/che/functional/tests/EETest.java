@@ -14,19 +14,29 @@ package com.redhat.che.functional.tests;
 import com.google.inject.Inject;
 import com.redhat.che.selenium.core.workspace.ProvidedWorkspace;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 
 // class for trying ProvidedWorkspace functionality
 public class EETest {
 
-  @Inject private ProvidedWorkspace worksapce;
+  @Inject private ProvidedWorkspace workspace;
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTestClass.class);
 
   @Test
   public void mytest() {
     try {
-      worksapce.getName();
+      LOG.info(
+          "Workspace with name: "
+              + workspace.getName()
+              + " and id: "
+              + workspace.getId()
+              + " was successfully injected. ");
     } catch (ExecutionException | InterruptedException e) {
-      // TODO Auto-generated catch block
+      LOG.error(
+          "Could not obtain workspace name and id - worskape was probably not successfully injected.");
       e.printStackTrace();
     }
     System.out.println("Test with provided workspace has passed.");
