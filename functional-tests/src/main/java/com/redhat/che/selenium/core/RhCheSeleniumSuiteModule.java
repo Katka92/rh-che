@@ -49,7 +49,6 @@ public class RhCheSeleniumSuiteModule extends AbstractModule {
   public ProvidedWorkspace getProvidedWorkspace(
       RhCheTestWorkspaceProvider workspaceProvider,
       DefaultTestUser testUser,
-      @Named("workspace.default_memory_gb") int defaultMemoryGb,
       @Named("sys.workspaceName") String givenWorkspaceName)
       throws Exception {
     ProvidedWorkspace ws = workspaceProvider.findWorkspace(testUser, givenWorkspaceName);
