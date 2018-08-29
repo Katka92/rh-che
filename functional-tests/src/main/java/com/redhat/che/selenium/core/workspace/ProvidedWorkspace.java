@@ -34,7 +34,6 @@ public class ProvidedWorkspace implements TestWorkspace {
   private AtomicReference<String> workspaceName;
   private AtomicReference<TestUser> owner;
   private RhCheTestWorkspaceServiceClient workspaceServiceClient;
-  private String givenWorksapceName;
 
   public ProvidedWorkspace(
       TestUser owner,
@@ -45,7 +44,6 @@ public class ProvidedWorkspace implements TestWorkspace {
     this.owner = new AtomicReference<>();
     this.owner.set(owner);
     this.workspaceServiceClient = testWorkspaceServiceClient;
-    this.givenWorksapceName = givenWorkspaceName;
     if (this.workspaceServiceClient == null) {
       throw new IllegalArgumentException(
           "workspaceServiceClient is null. Probably AbstractTestWorkspaceServiceClient is not instance of RhChe...");
@@ -71,15 +69,6 @@ public class ProvidedWorkspace implements TestWorkspace {
                 String errorMessage =
                     format("Workspace name='%s' start failed.", this.workspaceName.get());
                 LOG.error(errorMessage, e);
-
-                try {
-                  workspaceServiceClient.delete(
-                      this.workspaceName.get(), this.owner.get().getName());
-                } catch (Exception e1) {
-                  LOG.error(
-                      "Failed to remove workspace name='{}' when start is failed.",
-                      this.workspaceName.get());
-                }
 
                 if (e instanceof IllegalStateException) {
                   Assert.fail("Known issue https://github.com/eclipse/che/issues/8856", e);

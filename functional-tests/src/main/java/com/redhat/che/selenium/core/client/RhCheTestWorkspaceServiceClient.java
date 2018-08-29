@@ -94,6 +94,10 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
   @Override
   public void start(String workspaceId, String workspaceName, TestUser workspaceOwner)
       throws Exception {
+    if (getStatus(workspaceId).equals(WorkspaceStatus.RUNNING)) {
+      LOG.info("Workspace is running - no need to start it.");
+      return;
+    }
     try {
       this.cheStarterWrapper.startWorkspace(workspaceId, workspaceName, token);
       waitStatus(workspaceName, owner.getName(), WorkspaceStatus.RUNNING);
