@@ -22,17 +22,16 @@ import org.eclipse.che.selenium.core.user.TestUser;
 import org.eclipse.che.selenium.core.workspace.TestWorkspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
 
-/** @author Anatolii Bazko */
+/** @author Katerina Foniok */
 public class ProvidedWorkspace implements TestWorkspace {
 
   private static final Logger LOG = LoggerFactory.getLogger(ProvidedWorkspace.class);
 
   private CompletableFuture<Void> future;
   private AtomicReference<String> id;
-  private AtomicReference<String> workspaceName;
-  private AtomicReference<TestUser> owner;
+  private String workspaceName;
+  private TestUser owner;
   private RhCheTestWorkspaceServiceClient workspaceServiceClient;
 
   public ProvidedWorkspace(
@@ -40,14 +39,8 @@ public class ProvidedWorkspace implements TestWorkspace {
       RhCheTestWorkspaceServiceClient testWorkspaceServiceClient,
       String givenWorkspaceName) {
     this.id = new AtomicReference<>();
-    this.workspaceName = new AtomicReference<>();
-    this.owner = new AtomicReference<>();
-    this.owner.set(owner);
+    this.owner = owner;
     this.workspaceServiceClient = testWorkspaceServiceClient;
-    if (this.workspaceServiceClient == null) {
-      throw new IllegalArgumentException(
-          "workspaceServiceClient is null. Probably AbstractTestWorkspaceServiceClient is not instance of RhChe...");
-    }
 
     this.future =
         CompletableFuture.runAsync(
@@ -56,25 +49,19 @@ public class ProvidedWorkspace implements TestWorkspace {
                 final Workspace ws =
                     workspaceServiceClient.findExistingWorkspace(givenWorkspaceName);
                 this.id.set(ws.getId());
-                this.workspaceName.set(ws.getConfig().getName());
+                this.workspaceName = ws.getConfig().getName();
                 long start = System.currentTimeMillis();
-                workspaceServiceClient.start(
-                    this.id.get(), this.workspaceName.get(), this.owner.get());
+                workspaceServiceClient.start(this.id.get(), this.workspaceName, this.owner);
                 LOG.info(
                     "Workspace name='{}' id='{}' started in {} sec.",
-                    workspaceName.get(),
+                    workspaceName,
                     ws.getId(),
                     (System.currentTimeMillis() - start) / 1000);
               } catch (Exception e) {
                 String errorMessage =
-                    format("Workspace name='%s' start failed.", this.workspaceName.get());
+                    format("Workspace name='%s' start failed.", this.workspaceName);
                 LOG.error(errorMessage, e);
-
-                if (e instanceof IllegalStateException) {
-                  Assert.fail("Known issue https://github.com/eclipse/che/issues/8856", e);
-                } else {
-                  throw new IllegalStateException(errorMessage, e);
-                }
+                throw new IllegalStateException(errorMessage, e);
               }
             });
   }
@@ -86,7 +73,7 @@ public class ProvidedWorkspace implements TestWorkspace {
 
   @Override
   public String getName() throws ExecutionException, InterruptedException {
-    return this.future.thenApply(aVoid -> this.workspaceName.get()).get();
+    return this.future.thenApply(aVoid -> this.workspaceName).get();
   }
 
   @Override
@@ -96,7 +83,7 @@ public class ProvidedWorkspace implements TestWorkspace {
 
   @Override
   public TestUser getOwner() {
-    return this.owner.get();
+    return this.owner;
   }
 
   @Override

@@ -103,7 +103,6 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
       waitStatus(workspaceName, owner.getName(), WorkspaceStatus.RUNNING);
       LOG.info("Workspace " + workspaceName + "is running.");
     } catch (Exception e) {
-
       LOG.error("Failed to start workspace \"" + workspaceName + "\": " + e.getMessage(), e);
       throw e;
     }
