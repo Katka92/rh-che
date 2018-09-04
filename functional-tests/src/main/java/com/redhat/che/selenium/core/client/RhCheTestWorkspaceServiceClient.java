@@ -32,6 +32,7 @@ import org.eclipse.che.selenium.core.provider.TestApiEndpointUrlProvider;
 import org.eclipse.che.selenium.core.requestfactory.TestUserHttpJsonRequestFactoryCreator;
 import org.eclipse.che.selenium.core.user.DefaultTestUser;
 import org.eclipse.che.selenium.core.user.TestUser;
+import org.eclipse.che.selenium.core.utils.WaitUtils;
 import org.eclipse.che.selenium.core.workspace.MemoryMeasure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,16 +95,22 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
   @Override
   public void start(String workspaceId, String workspaceName, TestUser workspaceOwner)
       throws Exception {
+    start(workspaceId, workspaceName, workspaceOwner, true);
+  }
+
+  public void start(
+      String workspaceId, String workspaceName, TestUser workspaceOwner, boolean withPatch)
+      throws Exception {
     if (getStatus(workspaceId).equals(WorkspaceStatus.RUNNING)) {
       LOG.info("Workspace is running - no need to start it.");
       return;
     }
     try {
-      this.cheStarterWrapper.startWorkspace(workspaceId, workspaceName, token);
+      this.cheStarterWrapper.startWorkspace(workspaceId, workspaceName, token, withPatch);
       waitStatus(workspaceName, owner.getName(), WorkspaceStatus.RUNNING);
       LOG.info("Workspace " + workspaceName + "is running.");
     } catch (Exception e) {
-      LOG.error("Failed to start workspace \"" + workspaceName + "\": " + e.getMessage(), e);
+      LOG.error("Failed to start workspace \"" + workspaceName + "\".");
       throw e;
     }
   }
@@ -134,5 +141,27 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
         .fromUrl(getNameBasedUrl(workspaceName, owner.getName()))
         .request()
         .asDto(WorkspaceDto.class);
+  }
+
+  // Overriding this method to be able to set another timeout
+  @Override
+  public void waitStatus(String workspaceName, String userName, WorkspaceStatus expectedStatus)
+      throws Exception {
+    int timeoutInMins = 3;
+    int loops = timeoutInMins * 60;
+
+    WorkspaceStatus status = null;
+    for (int i = 0; i < loops; i++) {
+      status = getByName(workspaceName, userName).getStatus();
+      if (status == expectedStatus) {
+        return;
+      } else {
+        WaitUtils.sleepQuietly(1);
+      }
+    }
+
+    throw new IllegalStateException(
+        String.format(
+            "Workspace %s, status=%s, expected status=%s", workspaceName, status, expectedStatus));
   }
 }
