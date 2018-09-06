@@ -12,6 +12,7 @@
 package com.redhat.che.functional.tests;
 
 import com.google.inject.Inject;
+import com.redhat.che.selenium.core.client.RhCheTestWorkspaceServiceClient;
 import com.redhat.che.selenium.core.workspace.RhCheTestWorkspaceImpl;
 import org.eclipse.che.selenium.core.workspace.InjectTestWorkspace;
 import org.eclipse.che.selenium.pageobject.dashboard.workspaces.Workspaces;
@@ -28,8 +29,10 @@ public class WorkspaceTest {
 
   @Inject private RhCheTestWorkspaceImpl firstWorksapce;
 
+  @Inject private RhCheTestWorkspaceServiceClient workspaceServiceClient;
+
   @Test
-  public void test() {
+  public void testCorrectWayOfStaring() throws Exception {
     String running = Workspaces.Status.RUNNING;
     String stopped = Workspaces.Status.STOPPED;
 
@@ -41,10 +44,14 @@ public class WorkspaceTest {
 
     firstWorksapce.checkStatus(stopped);
     workspaceToPass.checkStatus(running);
+    LOG.info("Second workspace started successfully.");
+  }
 
-    LOG.info("Second workspace started successfully. Try to start first one without PATCH.");
+  @Test
+  public void testWrongWayOfStarting() {
+    LOG.info("Try to start first one without PATCH.");
     try {
-      firstWorksapce.startWorkspace(false);
+      workspaceServiceClient.startWithoutPatch(firstWorksapce.getId());
     } catch (Exception e) {
       LOG.info("Workspace should not be started - test succeded.");
     }

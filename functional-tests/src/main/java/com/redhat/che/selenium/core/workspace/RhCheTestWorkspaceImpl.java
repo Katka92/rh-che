@@ -112,17 +112,9 @@ public class RhCheTestWorkspaceImpl implements TestWorkspace {
     }
   }
 
-  public void startWorkspace() {
+  public void startWorkspace() throws Exception {
     try {
-      startWorkspace(true);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-  }
-
-  public void startWorkspace(boolean withPatch) throws Exception {
-    try {
-      workspaceServiceClient.start(id.toString(), workspaceName, owner, withPatch);
+      workspaceServiceClient.start(id.toString(), workspaceName, owner);
     } catch (Exception e) {
       LOG.error("Could not start workspace with name: " + workspaceName);
       throw e;
@@ -153,14 +145,6 @@ public class RhCheTestWorkspaceImpl implements TestWorkspace {
       LOG.error("Could not get status of workspace named: " + workspaceName);
       e.printStackTrace();
       return false;
-    }
-  }
-
-  public void startWorkspaceWithoutPatch() throws Exception {
-    try {
-      startWorkspace(false);
-    } catch (Exception e) {
-      throw e;
     }
   }
 }

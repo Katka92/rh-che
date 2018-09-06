@@ -128,16 +128,17 @@ public class CheStarterWrapper {
     }
   }
 
-  public void startWorkspace(String WorkspaceID, String name, String token, boolean withPatch)
-      throws Exception {
+  public void startWorkspace(String WorkspaceID, String name, String token) throws Exception {
+    patchPrepareEnv(name, token);
+    sendStartRequest(WorkspaceID, token);
+  }
+
+  public void sendStartRequest(String id, String token) throws IOException {
     OkHttpClient client = new OkHttpClient();
     RequestBody body = RequestBody.create(null, new byte[0]);
-    if (withPatch) {
-      patchPrepareEnv(name, token);
-    }
     StringBuilder sb = new StringBuilder("https://" + this.host);
     sb.append("/api/workspace/");
-    sb.append(WorkspaceID);
+    sb.append(id);
     sb.append("/runtime");
     Builder requestBuilder = new Request.Builder().url(sb.toString());
     requestBuilder.addHeader("Authorization", "Bearer " + token);
