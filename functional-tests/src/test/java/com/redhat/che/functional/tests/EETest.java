@@ -43,7 +43,7 @@ public class EETest {
   private static final Logger LOG = LoggerFactory.getLogger(TestTestClass.class);
 
   @BeforeClass
-  public void checkWorkspace() {
+  public void checkWorkspace() throws Exception {
     try {
       LOG.info(
           "Workspace with name: "
@@ -53,11 +53,10 @@ public class EETest {
               + " was successfully injected. ");
       ide.open(workspace);
       ide.waitOpenedWorkspaceIsReadyToUse();
-
     } catch (ExecutionException | InterruptedException e) {
       LOG.error(
           "Could not obtain workspace name and id - worskape was probably not successfully injected.");
-      e.printStackTrace();
+      throw e;
     } catch (Exception e) {
       LOG.error("Could not open workspace IDE.");
       e.printStackTrace();
