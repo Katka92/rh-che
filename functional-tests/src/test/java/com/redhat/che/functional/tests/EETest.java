@@ -11,11 +11,8 @@
  */
 package com.redhat.che.functional.tests;
 
-import static org.junit.Assert.assertTrue;
-
 import com.google.inject.Inject;
 import com.redhat.che.selenium.core.workspace.ProvidedWorkspace;
-import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import org.eclipse.che.selenium.core.constant.TestGitConstants;
 import org.eclipse.che.selenium.core.constant.TestMenuCommandsConstants;
@@ -27,8 +24,6 @@ import org.eclipse.che.selenium.pageobject.Menu;
 import org.eclipse.che.selenium.pageobject.NavigateToFile;
 import org.eclipse.che.selenium.pageobject.git.Git;
 import org.eclipse.che.selenium.pageobject.git.GitCompare;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.BeforeClass;
@@ -115,23 +110,6 @@ public class EETest {
     git.pushChanges(false);
     git.waitPushFormToClose();
     git.waitGitStatusBarWithMess("Successfully pushed");
-
-    String remoteURL = workspace.getProjectGitUrl(0);
-    String branchName = "master";
-    Collection<Ref> call;
-    try {
-      call = org.eclipse.jgit.api.Git.lsRemoteRepository().setRemote(remoteURL).call();
-    } catch (GitAPIException e) {
-      LOG.error("JGit failure", e);
-      throw new RuntimeException(e);
-    }
-    boolean found = false;
-    for (Ref ref : call) {
-      if (ref.getName().equals("refs/heads/" + branchName)) {
-        found = true;
-      }
-    }
-    assertTrue("Branch was not found on remote.", found);
 
     String GIT = "gwt-debug-MenuItem/git-true";
     String COMPARE_TOP = "gwt-debug-topmenu/Git/gitCompareGroup";
