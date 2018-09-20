@@ -11,17 +11,24 @@
  */
 package com.redhat.che.functional.tests;
 
+import static org.junit.Assert.assertTrue;
+
 import com.google.inject.Inject;
 import com.redhat.che.selenium.core.workspace.ProvidedWorkspace;
+import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import org.eclipse.che.selenium.core.constant.TestGitConstants;
 import org.eclipse.che.selenium.core.constant.TestMenuCommandsConstants;
 import org.eclipse.che.selenium.pageobject.CodenvyEditor;
 import org.eclipse.che.selenium.pageobject.Ide;
+import org.eclipse.che.selenium.pageobject.InformationDialog;
 import org.eclipse.che.selenium.pageobject.Loader;
 import org.eclipse.che.selenium.pageobject.Menu;
 import org.eclipse.che.selenium.pageobject.NavigateToFile;
 import org.eclipse.che.selenium.pageobject.git.Git;
+import org.eclipse.che.selenium.pageobject.git.GitCompare;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.BeforeClass;
@@ -37,7 +44,8 @@ public class EETest {
   @Inject private Ide ide;
   @Inject private Git git;
   @Inject private Menu menu;
-
+  @Inject private InformationDialog dialog;
+  @Inject private GitCompare gitCompare;
   private String text = "protected static final String template = \"Bonjour, %s!\";";
   private String fileName = "HttpApplication", extension = ".java";
   private static final Logger LOG = LoggerFactory.getLogger(TestTestClass.class);
@@ -100,9 +108,39 @@ public class EETest {
     menu.runCommand(TestMenuCommandsConstants.Git.GIT, TestMenuCommandsConstants.Git.COMMIT);
     git.waitAndRunCommit("commits from test");
     git.waitGitStatusBarWithMess(TestGitConstants.COMMIT_MESSAGE_SUCCESS);
+  }
 
+  @Test(priority = 4)
+  public void gitPush() throws Exception {
     git.pushChanges(false);
     git.waitPushFormToClose();
     git.waitGitStatusBarWithMess("Successfully pushed");
+
+    String remoteURL = workspace.getProjectGitUrl(0);
+    String branchName = "master";
+    Collection<Ref> call;
+    try {
+      call = org.eclipse.jgit.api.Git.lsRemoteRepository().setRemote(remoteURL).call();
+    } catch (GitAPIException e) {
+      LOG.error("JGit failure", e);
+      throw new RuntimeException(e);
+    }
+    boolean found = false;
+    for (Ref ref : call) {
+      if (ref.getName().equals("refs/heads/" + branchName)) {
+        found = true;
+      }
+    }
+    assertTrue("Branch was not found on remote.", found);
+
+    String GIT = "gwt-debug-MenuItem/git-true";
+    String COMPARE_TOP = "gwt-debug-topmenu/Git/gitCompareGroup";
+    String COMPARE_WITH_BRANCH = "gwt-debug-topmenu/Git/Compare/gitCompareWithBranch";
+
+    menu.runCommand(GIT, COMPARE_TOP, COMPARE_WITH_BRANCH);
+    git.waitGitCompareBranchFormIsOpen();
+    git.selectBranchIntoGitCompareBranchForm("origin/master");
+    gitCompare.clickOnBranchCompareButton();
+    dialog.containsText("There are no changes in the selected item.");
   }
 }
