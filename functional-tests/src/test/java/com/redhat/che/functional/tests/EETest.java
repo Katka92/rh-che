@@ -43,7 +43,12 @@ public class EETest {
   @Inject private GitCompare gitCompare;
   private String text = "protected static final String template = \"Bonjour, %s!\";";
   private String fileName = "HttpApplication", extension = ".java";
+
   private static final Logger LOG = LoggerFactory.getLogger(TestTestClass.class);
+  private static final String GIT = "gwt-debug-MenuItem/git-true";
+  private static final String COMPARE_TOP = "gwt-debug-topmenu/Git/gitCompareGroup";
+  private static final String COMPARE_WITH_BRANCH =
+      "gwt-debug-topmenu/Git/Compare/gitCompareWithBranch";
 
   @BeforeClass
   public void checkWorkspace() throws Exception {
@@ -62,7 +67,7 @@ public class EETest {
       throw e;
     } catch (Exception e) {
       LOG.error("Could not open workspace IDE.");
-      e.printStackTrace();
+      throw e;
     }
   }
 
@@ -110,10 +115,6 @@ public class EETest {
     git.pushChanges(false);
     git.waitPushFormToClose();
     git.waitGitStatusBarWithMess("Successfully pushed");
-
-    String GIT = "gwt-debug-MenuItem/git-true";
-    String COMPARE_TOP = "gwt-debug-topmenu/Git/gitCompareGroup";
-    String COMPARE_WITH_BRANCH = "gwt-debug-topmenu/Git/Compare/gitCompareWithBranch";
 
     menu.runCommand(GIT, COMPARE_TOP, COMPARE_WITH_BRANCH);
     git.waitGitCompareBranchFormIsOpen();
