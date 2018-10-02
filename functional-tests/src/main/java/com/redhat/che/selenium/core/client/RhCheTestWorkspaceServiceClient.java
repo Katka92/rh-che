@@ -32,7 +32,6 @@ import org.eclipse.che.selenium.core.provider.TestApiEndpointUrlProvider;
 import org.eclipse.che.selenium.core.requestfactory.TestUserHttpJsonRequestFactoryCreator;
 import org.eclipse.che.selenium.core.user.DefaultTestUser;
 import org.eclipse.che.selenium.core.user.TestUser;
-import org.eclipse.che.selenium.core.utils.WaitUtils;
 import org.eclipse.che.selenium.core.workspace.MemoryMeasure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,21 +146,7 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
   public void waitStatus(String workspaceName, String userName, WorkspaceStatus expectedStatus)
       throws Exception {
     int timeoutInMins = 3;
-    int loops = timeoutInMins * 60;
-
-    WorkspaceStatus status = null;
-    for (int i = 0; i < loops; i++) {
-      status = getByName(workspaceName, userName).getStatus();
-      if (status == expectedStatus) {
-        return;
-      } else {
-        WaitUtils.sleepQuietly(1);
-      }
-    }
-
-    throw new IllegalStateException(
-        String.format(
-            "Workspace %s, status=%s, expected status=%s", workspaceName, status, expectedStatus));
+    waitStatus(workspaceName, userName, expectedStatus, timeoutInMins * 60);
   }
 
   public void startWithoutPatch(String id) throws Exception {
