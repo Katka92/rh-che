@@ -102,7 +102,7 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
     try {
       this.cheStarterWrapper.checkIsRunning(this.token);
       this.cheStarterWrapper.startWorkspace(workspaceId, workspaceName, token);
-      waitStatus(workspaceName, owner.getName(), WorkspaceStatus.RUNNING);
+      waitStatus(workspaceName, owner.getName(), WorkspaceStatus.RUNNING, 300);
       LOG.info("Workspace " + workspaceName + "is running.");
     } catch (Exception e) {
       LOG.error("Failed to start workspace \"" + workspaceName + "\".");
@@ -137,16 +137,6 @@ public class RhCheTestWorkspaceServiceClient extends AbstractTestWorkspaceServic
         .fromUrl(getNameBasedUrl(workspaceName, owner.getName()))
         .request()
         .asDto(WorkspaceDto.class);
-  }
-
-  // Overriding this method to be able to set another timeout
-  // TODO this feature is temporary - should be changed in upstream. Issue #356 in
-  // che-functional-tests repo
-  @Override
-  public void waitStatus(String workspaceName, String userName, WorkspaceStatus expectedStatus)
-      throws Exception {
-    int timeoutInMins = 3;
-    waitStatus(workspaceName, userName, expectedStatus, timeoutInMins * 60);
   }
 
   public void startWithoutPatch(String id) throws Exception {
