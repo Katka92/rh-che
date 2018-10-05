@@ -32,7 +32,7 @@ public class WorkspaceTest {
   @Inject private RhCheTestWorkspaceServiceClient workspaceServiceClient;
 
   @Test
-  public void testCorrectWayOfStaring() throws Exception {
+  public void testCorrectWayOfStarting() throws Exception {
     String running = Workspaces.Status.RUNNING;
     String stopped = Workspaces.Status.STOPPED;
 

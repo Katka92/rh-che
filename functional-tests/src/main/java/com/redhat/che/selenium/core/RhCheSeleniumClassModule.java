@@ -22,7 +22,6 @@ import com.google.inject.spi.TypeListener;
 import com.redhat.che.selenium.core.workspace.RhCheTestWorkspaceImpl;
 import java.lang.reflect.Field;
 import org.eclipse.che.selenium.core.workspace.InjectTestWorkspace;
-import org.eclipse.che.selenium.core.workspace.TestWorkspaceInjector;
 
 public class RhCheSeleniumClassModule extends AbstractModule {
   @Override
@@ -44,8 +43,8 @@ public class RhCheSeleniumClassModule extends AbstractModule {
         if (field.getType() == RhCheTestWorkspaceImpl.class
             && field.isAnnotationPresent(InjectTestWorkspace.class)) {
           encounter.register(
-              new TestWorkspaceInjector<>(
-                  field, field.getAnnotation(InjectTestWorkspace.class), injectorProvider.get()));
+              new RhCheTestWorkspaceInjector<>(
+                  field, field.getAnnotation(InjectTestWorkspace.class), injectorProvider));
         }
       }
     }
