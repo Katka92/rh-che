@@ -44,7 +44,7 @@ public class RhCheSeleniumClassModule extends AbstractModule {
             && field.isAnnotationPresent(InjectTestWorkspace.class)) {
           encounter.register(
               new RhCheTestWorkspaceInjector<>(
-                  field, field.getAnnotation(InjectTestWorkspace.class), injectorProvider));
+                  field, field.getAnnotation(InjectTestWorkspace.class), injectorProvider.get()));
         }
       }
     }
