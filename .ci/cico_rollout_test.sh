@@ -95,22 +95,22 @@ tar --strip 1 -xzf oc.tar.gz -C /tmp
 
 export OPENSHIFT_TOKEN=$RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN
 docker run --name functional-tests-dep --privileged \
-           -v /var/run/docker.sock:/var/run/docker.sock \
-           -v /tmp/oc/:/tmp/oc/ \
-           -e "RHCHE_ACC_USERNAME=$CHE_TESTUSER_NAME" \
-           -e "RHCHE_ACC_PASSWORD=$CHE_TESTUSER_PASSWORD" \
-           -e "RHCHE_ACC_EMAIL=$CHE_TESTUSER_EMAIL" \
-           -e "RHCHE_ACC_TOKEN=$CHE_TESTUSER_OFFLINE__TOKEN" \
-           -e "CHE_OSIO_AUTH_ENDPOINT=https://auth.prod-preview.openshift.io" \
-           -e "TEST_SUITE=rolloutTest.xml" \
-	   -e "RHCHE_GITHUB_EXCHANGE=https://auth.prod-preview.openshift.io/api/token?for=https://github.com" \
-	   -e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
-	   -e "RHCHE_HOST_PROTOCOL=http" \
-	   -e "RHCHE_HOST_URL=$RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL" \
-	   -e "OPENSHIFT_URL=$OPENSHIFT_URL" \
-	   -e "OPENSHIFT_TOKEN=$OPENSHIFT_TOKEN" \
-	   -e "OPENSHIFT_PROJECT=$PROJECT" \
-           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v /tmp/oc/:/tmp/oc/ \
+		-e "RHCHE_ACC_USERNAME=$CHE_TESTUSER_NAME" \
+		-e "RHCHE_ACC_PASSWORD=$CHE_TESTUSER_PASSWORD" \
+		-e "RHCHE_ACC_EMAIL=$CHE_TESTUSER_EMAIL" \
+		-e "RHCHE_ACC_TOKEN=$CHE_TESTUSER_OFFLINE__TOKEN" \
+		-e "CHE_OSIO_AUTH_ENDPOINT=https://auth.prod-preview.openshift.io" \
+		-e "TEST_SUITE=rolloutTest.xml" \
+		-e "RHCHE_GITHUB_EXCHANGE=https://auth.prod-preview.openshift.io/api/token?for=https://github.com" \
+		-e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
+		-e "RHCHE_HOST_PROTOCOL=http" \
+		-e "RHCHE_HOST_URL=$RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL" \
+		-e "OPENSHIFT_URL=$OPENSHIFT_URL" \
+		-e "OPENSHIFT_TOKEN=$OPENSHIFT_TOKEN" \
+		-e "OPENSHIFT_PROJECT=$PROJECT" \
+		quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
 RESULT=$?
 
 if [[ $RESULT == 0 ]]; then
