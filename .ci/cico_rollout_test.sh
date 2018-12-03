@@ -14,7 +14,7 @@
 export PROJECT=testing-rollout
 export CHE_INFRASTRUCTURE=openshift
 export CHE_MULTIUSER=true
-export CHE_OFFLINE_TO_ACCESS_TOKEN_EXCHANGE_ENDPOINT=https://auth.prod-preview.openshift.io/api/token/refresh
+export CHE_OSIO_AUTH_ENDPOINT=https://auth.prod-preview.openshift.io
 export PROTOCOL=http
 export OPENSHIFT_URL=https://devtools-dev.ext.devshift.net:8443
 export RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL=rhche-$PROJECT.devtools-dev.ext.devshift.net
@@ -69,7 +69,7 @@ yum install --assumeyes \
             java-1.8.0-openjdk \
             java-1.8.0-openjdk-devel \
             centos-release-scl \
-	    origin-clients
+	    	origin-clients
 
 yum install --assumeyes \
             rh-maven33 
@@ -77,6 +77,10 @@ yum install --assumeyes \
 systemctl start docker
 pip install yq
 
+
+export OC_VERSION=3.9.33
+curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
+ln -s /usr/local/bin/oc /tmp/
 
 # --- DEPLOY RH-CHE ON DEVCLUSTER ---
 if ./dev-scripts/deploy_custom_rh-che.sh -o "${RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN}" \
@@ -90,9 +94,6 @@ else
   exit 4
 fi
 
-curl https://github.com/openshift/origin/releases/download/v3.9.0/openshift-origin-client-tools-v3.9.0-191fece-linux-64bit.tar.gz -o oc.tar.gz
-tar --strip 1 -xzf oc.tar.gz -C /tmp
-
 export OPENSHIFT_TOKEN=$RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN
 docker run --name functional-tests-dep --privileged \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -100,10 +101,8 @@ docker run --name functional-tests-dep --privileged \
 		-e "RHCHE_ACC_USERNAME=$CHE_TESTUSER_NAME" \
 		-e "RHCHE_ACC_PASSWORD=$CHE_TESTUSER_PASSWORD" \
 		-e "RHCHE_ACC_EMAIL=$CHE_TESTUSER_EMAIL" \
-		-e "RHCHE_ACC_TOKEN=$CHE_TESTUSER_OFFLINE__TOKEN" \
-		-e "CHE_OSIO_AUTH_ENDPOINT=https://auth.prod-preview.openshift.io" \
+		-e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
 		-e "TEST_SUITE=rolloutTest.xml" \
-		-e "RHCHE_GITHUB_EXCHANGE=https://auth.prod-preview.openshift.io/api/token?for=https://github.com" \
 		-e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
 		-e "RHCHE_HOST_PROTOCOL=http" \
 		-e "RHCHE_HOST_URL=$RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL" \
