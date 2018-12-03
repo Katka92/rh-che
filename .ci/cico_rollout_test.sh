@@ -9,7 +9,12 @@
 #This script expects this environment variables set:
 # CHE_TESTUSER_NAME, CHE_TESTUSER_PASSWORD, CHE_TESTUSER_EMAIL, RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN
 
-
+eval "$(./env-toolkit load -f jenkins-env.json -r \
+        ^BUILD_NUMBER$ \
+        ^JOB_NAME$ \
+        ^RH_CHE \
+        ^CHE)"
+		
 # --- SETTING ENVIRONMENT VARIABLES ---
 export PROJECT=testing-rollout
 export CHE_INFRASTRUCTURE=openshift
@@ -19,15 +24,6 @@ export PROTOCOL=http
 export OPENSHIFT_URL=https://devtools-dev.ext.devshift.net:8443
 export RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL=rhche-$PROJECT.devtools-dev.ext.devshift.net
 export OPENSHIFT_TOKEN=$RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN
-
-eval "$(./env-toolkit load -f jenkins-env.json -r \
-        ^DEVSHIFT_TAG_LEN$ \
-        ^QUAY_ \
-        ^KEYCLOAK \
-        ^BUILD_NUMBER$ \
-        ^JOB_NAME$ \
-        ^RH_CHE \
-	^CHE)"
 
 # --- TESTING CREDENTIALS ---
 echo "Running ${JOB_NAME} build number #${BUILD_NUMBER}, testing creds:"
@@ -54,25 +50,12 @@ else
 fi
 
 # --- INSTALLING NEEDED SOFTWARE ---
-# Getting core repos ready
 yum install epel-release --assumeyes
 yum update --assumeyes
 yum install python-pip --assumeyes
-
-# Test and show version
-pip -V
-
-# Getting dependencies ready
 yum install --assumeyes \
             docker \
-            jq \
-            java-1.8.0-openjdk \
-            java-1.8.0-openjdk-devel \
-            centos-release-scl \
-	    	origin-clients
-
-yum install --assumeyes \
-            rh-maven33 
+            jq 
 
 systemctl start docker
 pip install yq
@@ -80,7 +63,7 @@ pip install yq
 
 export OC_VERSION=3.9.33
 curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
-ln -s /usr/local/bin/oc /tmp/
+ln -s /usr/local/bin/oc /tmp
 
 # --- DEPLOY RH-CHE ON DEVCLUSTER ---
 if ./dev-scripts/deploy_custom_rh-che.sh -o "${RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN}" \
