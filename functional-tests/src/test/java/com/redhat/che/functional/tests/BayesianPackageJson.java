@@ -13,15 +13,10 @@ package com.redhat.che.functional.tests;
 
 import com.google.inject.Inject;
 import com.redhat.che.selenium.core.workspace.RhCheWorkspaceTemplate;
-import java.util.concurrent.ExecutionException;
 import org.eclipse.che.selenium.core.provider.TestApiEndpointUrlProvider;
 import org.eclipse.che.selenium.core.workspace.InjectTestWorkspace;
 import org.eclipse.che.selenium.core.workspace.TestWorkspace;
 import org.eclipse.che.selenium.pageobject.CodenvyEditor;
-import org.eclipse.che.selenium.pageobject.Ide;
-import org.eclipse.che.selenium.pageobject.Loader;
-import org.eclipse.che.selenium.pageobject.NavigateToFile;
-import org.eclipse.che.selenium.pageobject.NotificationsPopupPanel;
 import org.eclipse.che.selenium.pageobject.ProjectExplorer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,18 +25,14 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-public class BayesianPackageJson {
+public class BayesianPackageJson extends RhCheAbstractTestClass {
 
   private static final Logger LOG = LoggerFactory.getLogger(BayesianPackageJson.class);
 
   @InjectTestWorkspace(template = RhCheWorkspaceTemplate.RH_NODEJS)
   private TestWorkspace workspace;
 
-  @Inject private NavigateToFile navigateToFile;
-  @Inject private Loader loader;
   @Inject private CodenvyEditor editor;
-  @Inject private Ide ide;
-  @Inject private NotificationsPopupPanel notificationsPopupPanel;
   @Inject private ProjectExplorer projectExplorer;
   @Inject private TestApiEndpointUrlProvider testApiEndpointUrlProvider;
 
@@ -56,31 +47,13 @@ public class BayesianPackageJson {
 
   @BeforeClass
   public void openTestFile() throws Exception {
-    try {
-      LOG.info(
-          "Workspace with name: "
-              + workspace.getName()
-              + " and id: "
-              + workspace.getId()
-              + " was successfully injected. ");
-      ide.open(workspace);
-      ide.waitOpenedWorkspaceIsReadyToUse();
-      projectExplorer.waitProjectExplorer();
-      notificationsPopupPanel.waitProgressPopupPanelClose();
-      projectExplorer.waitItem(PROJECT_NAME);
-    } catch (ExecutionException | InterruptedException e) {
-      LOG.error(
-          "Could not obtain workspace name and id - worskape was probably not successfully injected.");
-      throw e;
-    } catch (Exception e) {
-      LOG.error("Could not open workspace IDE.");
-      throw e;
-    }
+    checkWorkspace(workspace);
+    projectExplorer.waitItem(PROJECT_NAME);
   }
 
   @BeforeMethod
   public void prepareProjectFile() {
-    openDefinedClass();
+    openDefinedClass(PROJECT_FILE);
     appendDependency();
   }
 
@@ -101,22 +74,13 @@ public class BayesianPackageJson {
   @Test
   public void checkErrorPresentAfterReopenFile() {
     editor.closeAllTabs();
-    openDefinedClass();
+    openDefinedClass(PROJECT_FILE);
     editor.setCursorToLine(JSON_EXPECTED_ERROR_LINE);
     editor.moveCursorToText("1.7.1");
     if (editorCheckBayesianError()) {
       return;
     }
     LOG.info("Bayesian error message was present after reopening file.");
-  }
-
-  private void openDefinedClass() {
-    navigateToFile.launchNavigateToFileByKeyboard();
-    navigateToFile.waitFormToOpen();
-    navigateToFile.typeSymbolInFileNameField(PROJECT_FILE);
-    navigateToFile.selectFileByName(PROJECT_FILE);
-    loader.waitOnClosed();
-    editor.waitActive();
   }
 
   private void appendDependency() {
