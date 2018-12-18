@@ -16,22 +16,19 @@ import java.util.concurrent.ExecutionException;
 import org.eclipse.che.selenium.core.workspace.TestWorkspace;
 import org.eclipse.che.selenium.pageobject.CodenvyEditor;
 import org.eclipse.che.selenium.pageobject.Ide;
-import org.eclipse.che.selenium.pageobject.Loader;
-import org.eclipse.che.selenium.pageobject.NavigateToFile;
 import org.eclipse.che.selenium.pageobject.NotificationsPopupPanel;
 import org.eclipse.che.selenium.pageobject.ProjectExplorer;
+import org.eclipse.che.selenium.pageobject.ProjectExplorer.ProjectExplorerOptionsMenuItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RhCheAbstractTestClass {
+public abstract class RhCheAbstractTestClass {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestTestClass.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RhCheAbstractTestClass.class);
 
   @Inject private Ide ide;
   @Inject private NotificationsPopupPanel notificationsPopupPanel;
   @Inject private ProjectExplorer projectExplorer;
-  @Inject private NavigateToFile navigateToFile;
-  @Inject private Loader loader;
   @Inject private CodenvyEditor editor;
 
   public void checkWorkspace(TestWorkspace workspace) throws Exception {
@@ -42,6 +39,7 @@ public class RhCheAbstractTestClass {
               + " and id: "
               + workspace.getId()
               + " was successfully injected. ");
+      ide.open(workspace);
       ide.waitOpenedWorkspaceIsReadyToUse();
       projectExplorer.waitProjectExplorer();
       notificationsPopupPanel.waitProgressPopupPanelClose();
@@ -55,12 +53,13 @@ public class RhCheAbstractTestClass {
     }
   }
 
-  public void openDefinedClass(String projectFile) {
-    navigateToFile.launchNavigateToFileByKeyboard();
-    navigateToFile.waitFormToOpen();
-    navigateToFile.typeSymbolInFileNameField(projectFile);
-    navigateToFile.selectFileByName(projectFile);
-    loader.waitOnClosed();
-    editor.waitActive();
+  public void closeFilesAndProject() {
+    editor.closeAllTabs();
+    projectExplorer.clickOnProjectExplorerOptionsButton();
+    projectExplorer.clickOnOptionsMenuItem(ProjectExplorerOptionsMenuItem.COLLAPSE_ALL);
+  }
+
+  public void closeBrowser() {
+    ide.close();
   }
 }
