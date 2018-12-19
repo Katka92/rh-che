@@ -42,17 +42,17 @@ public class BayesianPomXml extends BayesianAbstractTestClass {
 
   @BeforeClass
   public void setUp() throws Exception {
-    super.setPathToFile(PATH_TO_FILE);
-    super.setExpectedErrorLine(POM_EXPECTED_ERROR_LINE);
-    super.setExpectedErrorText(POM_EXPECTED_ERROR_TEXT);
-    super.setInjectionEntryPoint(POM_INJECTION_ENTRY_POINT);
-    super.setProjectFile(PROJECT_FILE);
-    super.setPathToFile(PATH_TO_FILE);
-    super.setErrorMessage(ERROR_MESSAGE);
-    super.setProjectName(PROJECT_NAME);
-    super.setProjectDependency(PROJECT_DEPENDENCY);
-    super.setWorksapce(workspace);
-    super.openTestFile();
+    setPathToFile(PATH_TO_FILE);
+    setExpectedErrorLine(POM_EXPECTED_ERROR_LINE);
+    setExpectedErrorText(POM_EXPECTED_ERROR_TEXT);
+    setInjectionEntryPoint(POM_INJECTION_ENTRY_POINT);
+    setProjectFile(PROJECT_FILE);
+    setPathToFile(PATH_TO_FILE);
+    setErrorMessage(ERROR_MESSAGE);
+    setProjectName(PROJECT_NAME);
+    setProjectDependency(PROJECT_DEPENDENCY);
+    setWorksapce(workspace);
+    openTestFile();
   }
 
   @Override

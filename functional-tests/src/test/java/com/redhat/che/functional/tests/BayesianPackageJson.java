@@ -33,16 +33,16 @@ public class BayesianPackageJson extends BayesianAbstractTestClass {
 
   @BeforeClass
   public void setUp() throws Exception {
-    super.setPathToFile(PATH_TO_FILE);
-    super.setExpectedErrorLine(JSON_EXPECTED_ERROR_LINE);
-    super.setExpectedErrorText(JSON_EXPECTED_ERROR_TEXT);
-    super.setInjectionEntryPoint(JSON_INJECTION_ENTRY_POINT);
-    super.setProjectFile(PROJECT_FILE);
-    super.setPathToFile(PATH_TO_FILE);
-    super.setErrorMessage(ERROR_MESSAGE);
-    super.setProjectName(PROJECT_NAME);
-    super.setProjectDependency(PROJECT_DEPENDENCY);
-    super.setWorksapce(workspace);
-    super.openTestFile();
+    setPathToFile(PATH_TO_FILE);
+    setExpectedErrorLine(JSON_EXPECTED_ERROR_LINE);
+    setExpectedErrorText(JSON_EXPECTED_ERROR_TEXT);
+    setInjectionEntryPoint(JSON_INJECTION_ENTRY_POINT);
+    setProjectFile(PROJECT_FILE);
+    setPathToFile(PATH_TO_FILE);
+    setErrorMessage(ERROR_MESSAGE);
+    setProjectName(PROJECT_NAME);
+    setProjectDependency(PROJECT_DEPENDENCY);
+    setWorksapce(workspace);
+    openTestFile();
   }
 }

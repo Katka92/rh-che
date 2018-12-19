@@ -16,6 +16,7 @@ import org.eclipse.che.selenium.core.provider.TestApiEndpointUrlProvider;
 import org.eclipse.che.selenium.core.workspace.TestWorkspace;
 import org.eclipse.che.selenium.pageobject.CodenvyEditor;
 import org.eclipse.che.selenium.pageobject.ProjectExplorer;
+import org.openqa.selenium.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.SkipException;
@@ -129,11 +130,15 @@ public abstract class BayesianAbstractTestClass extends RhCheAbstractTestClass {
   }
 
   protected void editorCheckBayesianError() {
-    if (testApiEndpointUrlProvider.get().getHost().equals(CHE_PROD_PREVIEW_URL)) {
-      throw new SkipException("Skipping test for prod-preview - known issue.");
-    }
     editor.setCursorToLine(EXPECTED_ERROR_LINE);
     editor.moveCursorToText(EXPECTED_ERROR_TEXT);
-    editor.waitTextInToolTipPopup(ERROR_MESSAGE);
+    try {
+      editor.waitTextInToolTipPopup(ERROR_MESSAGE);
+    } catch (TimeoutException e) {
+      if (testApiEndpointUrlProvider.get().getHost().equals(CHE_PROD_PREVIEW_URL)) {
+        throw new SkipException("Skipping test for prod-preview - known issue.");
+      }
+      throw e;
+    }
   }
 }
