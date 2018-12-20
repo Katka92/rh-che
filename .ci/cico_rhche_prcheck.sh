@@ -10,6 +10,19 @@ export BASEDIR=$(pwd)
 export DEV_CLUSTER_URL=https://devtools-dev.ext.devshift.net:8443/
 export OC_VERSION=3.10.85
 
+mkdir emptydir
+ls -la ./artifacts.key
+chmod 600 ./artifacts.key
+chown root ./artifacts.key
+
+#rsync --password-file=./artifacts.key -PHva --delete --include=functional-tests.log --exclude=* emptydir/ devtools@artifacts.ci.centos.org::devtools/rhche
+rsync --password-file=./artifacts.key -PHva --delete emptydir/ devtools@artifacts.ci.centos.org::devtools/rhche/screenshots
+rsync --password-file=./artifacts.key -PHva --delete --include=screenshots --exclude=* emptydir/ devtools@artifacts.ci.centos.org::devtools/rhche
+
+rsync --password-file=./artifacts.key -PHva --delete --include=README.md --exclude=* emptydir/ devtools@artifacts.ci.centos.org::devtools/
+exit
+
+
 eval "$(./env-toolkit load -f jenkins-env.json -r \
         ^DEVSHIFT_TAG_LEN$ \
         ^QUAY_ \
