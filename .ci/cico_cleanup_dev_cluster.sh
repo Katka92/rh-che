@@ -9,7 +9,7 @@
 # 1 - missing credentials
 # 2 - OpenShift login failed
 
-export OC_VERSION=3.9.33
+export OC_VERSION=3.10.90
 export DEV_CLUSTER_URL=https://devtools-dev.ext.devshift.net:8443/
 
 yum install --assumeyes -q epel-release

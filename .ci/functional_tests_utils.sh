@@ -35,12 +35,12 @@ function installDependencies() {
 	
 	systemctl start docker
 	pip install yq	
+	curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
 }
 
 function checkAllCreds() {
 	set -x
 	CREDS_NOT_SET="false"
-	curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
 
 	if [[ -z "${QUAY_USERNAME}" || -z "${QUAY_PASSWORD}" ]]; then
 	  echo "Docker registry credentials not set"
