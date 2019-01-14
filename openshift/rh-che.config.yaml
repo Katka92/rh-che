@@ -1,52 +1,69 @@
+# Copyright (c) 2012-2018 Red Hat, Inc
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rhche
 type: Opaque
 data:
-  infra-bootstrapper-binary-url: "https://che.prod-preview.openshift.io/agent-binaries/linux_amd64/bootstrapper/bootstrapper"
-  infra-machine-start-timeout: "5"
-  infra-pvc-strategy: "common"
-  infra-trust-certs: "true"
-  multi-user: "true"
-  che-host: "che.prod-preview.openshift.io"
-  workspace-storage: "/home/user/che/workspaces"
-  local-conf-dir: "/etc/conf"
-  che.logs.dir: "/data/logs"
-  che.predefined.stacks.reload_on_start: "true"
-  log-level: "INFO"
-  port: "8080"
-  remote-debugging-enabled: "false"
-  workspaces-memory-limit: "2400"
-  workspaces-memory-limit-max: "2400mb"
-  enable-workspaces-autostart: "true"
-  keycloak-github-endpoint: "https://auth.prod-preview.openshift.io/api/token?for=https://github.com"
-  che-server-java-opts: "-XX:+UseParallelGC -XX:MinHeapFreeRatio=25 -XX:MaxHeapFreeRatio=40 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -Dsun.zip.disableMemoryMapping=true -Xms50m -Xmx180m -Dfile.encoding=UTF8"
-  che-workspaces-java-opts: "-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 -XX:MaxRAM=1200m -Xms256m"
-  che-openshift-secure-routes: "true"
-  che-secure-external-urls: "true"
-  che-openshift-precreate-subpaths: "false"
-  che-fabric8-multitenant: "true"
-  che-fabric8-user-service-endpoint: "https://api.prod-preview.openshift.io/api/user/services"
-  che-fabric8-auth-endpoint: "https://auth.prod-preview.openshift.io"
-  che-fabric8-multicluster-oso-proxy-url: "https://f8osoproxy-test-dsaas-preview.b6ff.rh-idev.openshiftapps.com"
-  che-api: "https://che.prod-preview.openshift.io/api"
-  che-websocket-endpoint: "wss://che.prod-preview.openshift.io/api/websocket"
-  che-workspace-logs: "/workspace_logs"
-  che-keycloak-auth-server-url: "NULL"
-  che-keycloak-realm: "NULL"
-  che-keycloak-client-id: "740650a2-9c44-4db5-b067-a3d1b2cd2d01"
-  che-keycloak-oidc-provider: "https://auth.prod-preview.openshift.io/api"
-  che-keycloak-use-nonce: "false"
-  che-workspace-server-ping-success-threshold: "2"
-  che-limits-user-workspaces-run-count: "1"
-  che.workspace.agent.dev.inactive_stop_timeout_ms: "900000"
-  logs-encoding: "json"
-  che-logs-sentry-level: 'WARN'
-  che-logs-sentry-dsn: 'NULL'
-  sentry-stacktrace-app-packages: 'com.redhat,org.eclipse.che'
-  sentry-environment: 'dev'
-  analytics.segment_write_key: 'NULL' 
-  analytics.woopra_domain: 'NULL'
-  workspaces-pvc-storage-size: '1Gi'
-  
+  CHE_FABRIC8_ANALYTICS_SEGMENT__WRITE__KEY: 'NULL'
+  CHE_FABRIC8_ANALYTICS_WOOPRA__DOMAIN: 'NULL'
+  CHE_FABRIC8_END2END_PROTECT_VERIFY__WITH__IP: "false"
+  CHE_API: "https://che.prod-preview.openshift.io/api"
+  CHE_CORS_ENABLED: "true"
+  CHE_FABRIC8_AUTH_ENDPOINT: "https://auth.prod-preview.openshift.io"
+  CHE_FABRIC8_MULTICLUSTER_OSO_PROXY_URL: "https://osoproxy.prod-preview.openshift.io"
+  CHE_FABRIC8_MULTITENANT: "true"
+  CHE_FABRIC8_USER__SERVICE_ENDPOINT: "https://api.prod-preview.openshift.io/api/user/services"
+  CHE_HOST: "che.prod-preview.openshift.io"
+  CHE_CORE_JSONRPC_PROCESSOR__MAX__POOL__SIZE: "2000"
+  CHE_KEYCLOAK_AUTH__SERVER__URL: "NULL"
+  CHE_KEYCLOAK_CLIENT__ID: "740650a2-9c44-4db5-b067-a3d1b2cd2d01"
+  CHE_KEYCLOAK_JS__ADAPTER__URL: "/api/fabric8-end2end/files/RhCheKeycloak.js"
+  CHE_KEYCLOAK_OIDC__PROVIDER: "https://auth.prod-preview.openshift.io/api"
+  CHE_KEYCLOAK_REALM: "NULL"
+  CHE_KEYCLOAK_USE__NONCE: "false"
+  CHE_LIMITS_USER_WORKSPACES_RUN_COUNT: "1"
+  CHE_LOGS_DIR: "/data/logs"
+  SENTRY_DSN: 'NULL'
+  CHE_LOGS_SENTRY_LEVEL: 'WARN'
+  CHE_METRICS_ENABLED: "false"
+  CHE_INFRA_KUBERNETES_PVC_PRECREATE__SUBPATHS: "false"
+  CHE_INFRA_OPENSHIFT_TLS__ENABLED: "true"
+  CHE_PREDEFINED_STACKS_RELOAD__ON__START: "true"
+  JAVA_OPTS: "-XX:MaxRAMFraction=2 -XX:+UseParallelGC -XX:MinHeapFreeRatio=25 -XX:MaxHeapFreeRatio=40 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -Dsun.zip.disableMemoryMapping=true -Xms50m -Dfile.encoding=UTF8"
+  CHE_SYSTEM_ADMIN__NAME: "admin"
+  CHE_SYSTEM_SUPER__PRIVILEGED__MODE: "true"
+  CHE_WEBSOCKET_ENDPOINT: "wss://che.prod-preview.openshift.io/api/websocket"
+  CHE_WORKSPACE_AGENT_DEV_INACTIVE__STOP__TIMEOUT__MS: "900000"
+  CHE_WORKSPACE_LOGS_ROOT__DIR: "/workspace_logs"
+  CHE_WORKSPACE_SERVER_PING__INTERVAL__MILLISECONDS: "500"
+  CHE_WORKSPACE_SERVER_PING__SUCCESS__THRESHOLD: "1"
+  CHE_WORKSPACE_JAVA__OPTIONS: "-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 -XX:MaxRAM=1200m -Xms256m"
+  CHE_WORKSPACE_AUTO__START: "true"
+  CHE_INFRA_KUBERNETES_BOOTSTRAPPER_BINARY__URL: "https://che.prod-preview.openshift.io/agent-binaries/linux_amd64/bootstrapper/bootstrapper"
+  CHE_INFRA_KUBERNETES_MACHINE__START__TIMEOUT__MIN: "5"
+  CHE_INFRA_KUBERNETES_PVC_STRATEGY: "common"
+  CHE_INFRA_KUBERNETES_TRUST__CERTS: "true"
+  CHE_KEYCLOAK_GITHUB_ENDPOINT: "https://auth.prod-preview.openshift.io/api/token?for=https://github.com"
+  CHE_LOCAL_CONF_DIR: "/etc/conf"
+  CHE_LOG_LEVEL: "INFO"
+  CHE_LOGS_APPENDERS_IMPL: "json"
+  CHE_MULTIUSER: "true"
+  CHE_WORKSPACE_PLUGIN__REGISTRY__URL: 'https://che-plugin-registry.prod-preview.openshift.io/'
+  CHE_PORT: "8080"
+  CHE_DEBUG_SERVER: "false"
+  SENTRY_ENVIRONMENT: 'dev'
+  SENTRY_STACKTRACE_APP_PACKAGES: 'com.redhat,org.eclipse.che'
+  CHE_WORKSPACE_DEFAULT__MEMORY__MB: "3000"
+  CHE_LIMITS_WORKSPACE_ENV_RAM: "3gb"
+  CHE_INFRA_KUBERNETES_PVC_QUANTITY: '1Gi'
+  CHE_SERVER_SECURE__EXPOSER_JWTPROXY_MEMORY__LIMIT: "150mb"
+  CHE_WORKSPACE_SIDECAR_DEFAULT__MEMORY__LIMIT__MB: "150"
+  CHE_INFRA_KUBERNETES_SERVICE__ACCOUNT__NAME: "che-workspace"
+  CHE_WORKSPACE_STORAGE: "/home/user/che/workspaces"

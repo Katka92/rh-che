@@ -1,20 +1,21 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
  */
-
 package com.redhat.che.plugin.analytics.wsagent;
 
 import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.*;
 import static com.redhat.che.plugin.analytics.wsagent.EventProperties.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Singleton;
 import java.io.IOException;
@@ -43,7 +44,7 @@ import org.slf4j.Logger;
 public class UrlToEventFilter implements Filter {
   private static final Logger LOG = getLogger(UrlToEventFilter.class);
 
-  private boolean startWorkspaceEventSent = false;
+  @VisibleForTesting boolean startWorkspaceEventSent = false;
   private final AnalyticsManager manager;
 
   @Inject
@@ -85,7 +86,7 @@ public class UrlToEventFilter implements Filter {
       String method = httpRequest.getMethod();
 
       final HttpSession session = httpRequest.getSession();
-      Subject subject = (Subject) session.getAttribute("principal");
+      Subject subject = (Subject) session.getAttribute("che_subject");
       if (subject == null) {
         LOG.warn("No Subject to find out a user for analytics");
         return;
@@ -122,23 +123,22 @@ public class UrlToEventFilter implements Filter {
             userAgent);
       }
 
+      if ("POST".equals(method) && path.startsWith("/api/git/commit")) {
+        manager.onEvent(userId, COMMIT_LOCALLY, Collections.emptyMap(), ip, userAgent);
+      }
+
+      if ("POST".equals(method) && path.startsWith("/api/git/push")) {
+        manager.onEvent(userId, PUSH_TO_REMOTE, Collections.emptyMap(), ip, userAgent);
+      }
+
       manager.onActivity(userId);
     } catch (Exception e) {
       LOG.error("", e);
     }
   }
 
-  private String guessLanguage(String path) {
-    String language;
-    if (path.endsWith(".xml")) {
-      return "xml";
-    }
-    if (path.endsWith(".js")) {
-      return "javascript";
-    }
-    if (path.endsWith(".jsp")) {
-      return "jsp";
-    }
+  @VisibleForTesting
+  String guessLanguage(String path) {
     String extension = "";
     String fileName = path;
     int lastSlash = path.lastIndexOf('/');
@@ -150,11 +150,82 @@ public class UrlToEventFilter implements Filter {
       extension = fileName.substring(lastPoint + 1);
     }
     if (extension.isEmpty()) {
-      language = "unknown";
-    } else {
-      language = "unknown : ." + extension;
+      return "unknown";
     }
-    return language;
+    switch (extension) {
+      case "xml":
+        return "xml";
+
+      case "md":
+        return "markdown";
+
+      case "js":
+        return "javascript";
+
+      case "jsp":
+        return "jsp";
+
+      case "java":
+        return "java";
+
+      case "yaml":
+      case "yml":
+        return "yaml";
+
+      case "ts":
+        return "typescript";
+
+      case "py":
+        return "python";
+
+      case "php":
+        return "php";
+
+      case "ceylon":
+        return "ceylon";
+
+      case "cs":
+      case "csx":
+        return "csharp";
+
+      case "c":
+      case "h":
+      case "cpp":
+      case "hpp":
+      case "cc":
+      case "hh":
+      case "hxx":
+      case "cxx":
+      case "C":
+      case "H":
+      case "CPP":
+      case "HPP":
+      case "CC":
+      case "HH":
+      case "CXX":
+      case "HXX":
+        return "cpp";
+
+      case "json":
+      case "bowerrc":
+      case "jshintrc":
+      case "jscsrc":
+      case "eslintrc":
+      case "babelrc":
+        return "json";
+
+      case "css":
+        return "css";
+
+      case "html":
+        return "html";
+
+      case "sh":
+        return "shellscript";
+
+      default:
+        return "unknown : ." + extension;
+    }
   }
 
   @Override

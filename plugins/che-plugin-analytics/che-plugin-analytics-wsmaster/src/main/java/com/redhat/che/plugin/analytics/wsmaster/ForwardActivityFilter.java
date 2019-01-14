@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
  */
-
 package com.redhat.che.plugin.analytics.wsmaster;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
@@ -40,6 +40,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.UriBuilder;
 import org.eclipse.che.api.core.NotFoundException;
 import org.eclipse.che.api.core.ServerException;
+import org.eclipse.che.api.core.model.workspace.Runtime;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.core.notification.EventService;
 import org.eclipse.che.api.core.notification.EventSubscriber;
@@ -50,6 +51,7 @@ import org.eclipse.che.api.workspace.shared.dto.event.WorkspaceStatusEvent;
 import org.eclipse.che.commons.auth.token.RequestTokenExtractor;
 import org.eclipse.che.commons.subject.Subject;
 import org.eclipse.che.multiuser.machine.authentication.server.signature.SignatureKeyManager;
+import org.eclipse.che.multiuser.machine.authentication.server.signature.SignatureKeyManagerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,9 +93,18 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
     if (WorkspaceStatus.STOPPING.equals(event.getStatus())) {
       try {
         final WorkspaceImpl workspace = workspaceManager.getWorkspace(workspaceId);
-        String userId = workspace.getRuntime().getOwner();
-        callWorkspaceAnalyticsEndpoint(
-            userId, workspaceId, "/fabric8-che-analytics/stopped", "notify stop", workspace);
+        Runtime runtime = workspace.getRuntime();
+        if (runtime != null) {
+          String userId = runtime.getOwner();
+          callWorkspaceAnalyticsEndpoint(
+              userId, workspaceId, "/fabric8-che-analytics/stopped", "notify stop", workspace);
+        } else {
+          LOG.warn(
+              "Received stopping event for workspace {}/{} with id {} but runtime is null",
+              workspace.getNamespace(),
+              workspace.getConfig().getName(),
+              workspaceId);
+        }
       } catch (NotFoundException | ServerException e) {
         LOG.warn("", e);
         return;
@@ -116,12 +127,12 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
         return;
       }
 
-      String userId = extractUserId(httpRequest);
-
       String workspaceId = pathParts[pathParts.length - 1];
       if (workspaceId == null) {
         return;
       }
+
+      String userId = extractUserId(httpRequest, workspaceId);
 
       try {
         final WorkspaceImpl workspace = workspaceManager.getWorkspace(workspaceId);
@@ -167,20 +178,7 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
             server -> {
               try {
                 URI uri = UriBuilder.fromUri(server.getUrl()).path(targetEndpoint).build();
-
-                int port;
-                if (uri.getPort() == -1) {
-                  if ("http".equals(uri.getScheme())) {
-                    port = 80;
-                  } else {
-                    port = 443;
-                  }
-                } else {
-                  port = uri.getPort();
-                }
-
                 LOG.debug("{} on workspace {} to {} for user {}", action, workspaceId, uri, userId);
-
                 HttpURLConnection httpURLConnection =
                     (HttpURLConnection) uri.toURL().openConnection();
                 httpURLConnection.setRequestProperty(
@@ -198,7 +196,7 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
             });
   }
 
-  private String extractUserId(HttpServletRequest httpRequest) {
+  private String extractUserId(HttpServletRequest httpRequest, String workspaceId) {
     // First search in the session fro activity notification coming from the client
 
     final HttpSession session = httpRequest.getSession();
@@ -222,7 +220,9 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
     // check token signature and verify is this token machine or not
     try {
       final Jws<Claims> jwt =
-          Jwts.parser().setSigningKey(keyManager.getKeyPair().getPublic()).parseClaimsJws(token);
+          Jwts.parser()
+              .setSigningKey(keyManager.getOrCreateKeyPair(workspaceId).getPublic())
+              .parseClaimsJws(token);
       final Claims claims = jwt.getBody();
 
       if (MACHINE_TOKEN_KIND.equals(jwt.getHeader().get("kind"))) {
@@ -231,7 +231,9 @@ public class ForwardActivityFilter implements Filter, EventSubscriber<WorkspaceS
     } catch (UnsupportedJwtException
         | MalformedJwtException
         | SignatureException
-        | ExpiredJwtException ex) {
+        | SignatureKeyManagerException
+        | ExpiredJwtException
+        | IllegalArgumentException ex) {
       LOG.warn("Could not get a user Id from a machine token", ex);
     }
     return null;

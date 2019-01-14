@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
@@ -18,7 +19,9 @@ public enum AnalyticsEvent {
   WORKSPACE_USED("Use Workspace in Che"),
   WORKSPACE_INACTIVE("Keep Workspace Inactive in Che"),
   WORKSPACE_STOPPED("Stop Workspace in Che"),
-  EDITOR_USED("Edit Workspace File In Che", 30, new String[] {PROGRAMMING_LANGUAGE});
+  EDITOR_USED("Edit Workspace File in Che", 30, new String[] {PROGRAMMING_LANGUAGE}),
+  PUSH_TO_REMOTE("Push to remote in Che", 10),
+  COMMIT_LOCALLY("Commit locally in Che", 10);
 
   private final String name;
   private final int expectedDuration;

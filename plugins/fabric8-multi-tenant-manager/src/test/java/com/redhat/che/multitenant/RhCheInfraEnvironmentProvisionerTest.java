@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
@@ -14,6 +15,9 @@ import static com.google.common.collect.ImmutableMap.of;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,22 +26,29 @@ import static org.testng.Assert.assertTrue;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.openshift.api.model.Route;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.eclipse.che.api.core.model.workspace.runtime.RuntimeIdentity;
 import org.eclipse.che.api.workspace.server.spi.InfrastructureException;
 import org.eclipse.che.commons.env.EnvironmentContext;
 import org.eclipse.che.commons.subject.Subject;
 import org.eclipse.che.commons.subject.SubjectImpl;
 import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.WorkspaceVolumesStrategy;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.CertificateProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ImagePullSecretProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.InstallerServersPortProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.LogsVolumeMachineProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.PodTerminationGracePeriodProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ProxySettingsProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ServiceAccountProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.env.EnvVarsConverter;
-import org.eclipse.che.workspace.infrastructure.kubernetes.provision.limits.ram.RamLimitProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.limits.ram.RamLimitRequestProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.restartpolicy.RestartPolicyRewriter;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.server.ServersConverter;
 import org.eclipse.che.workspace.infrastructure.openshift.environment.OpenShiftEnvironment;
@@ -51,6 +62,7 @@ import org.testng.annotations.Test;
 
 @Listeners(MockitoTestNGListener.class)
 public class RhCheInfraEnvironmentProvisionerTest {
+  private static final String WSAGENT_ROUTER_TIMEOUT = "10m";
   private static final String USER_ID = "userId";
   private static final String NAMESPACE = "project1";
   private static final String CLUSTER_URL = "https://api.starter-us-east-2.openshift.com/";
@@ -63,20 +75,25 @@ public class RhCheInfraEnvironmentProvisionerTest {
   @Mock private EnvVarsConverter envVarsConverter;
   @Mock private RestartPolicyRewriter restartPolicyRewriter;
   @Mock private WorkspaceVolumesStrategy volumesStrategy;
-  @Mock private RamLimitProvisioner ramLimitProvisioner;
+  @Mock private RamLimitRequestProvisioner ramLimitProvisioner;
   @Mock private InstallerServersPortProvisioner installerServersPortProvisioner;
   @Mock private LogsVolumeMachineProvisioner logsVolumeMachineProvisioner;
   @Mock private PodTerminationGracePeriodProvisioner podTerminationGracePeriodProvisioner;
   @Mock private ImagePullSecretProvisioner imagePullSecretProvisioner;
+  @Mock private ProxySettingsProvisioner proxySettingsProvisioner;
+  @Mock private CertificateProvisioner certificateProvisioner;
 
   @Mock private OpenshiftUserTokenProvider openshiftUserTokenProvider;
   @Mock private TenantDataProvider tenantDataProvider;
   @Mock private RuntimeIdentity runtimeIdentity;
   @Mock private OpenShiftEnvironment openShiftEnvironment;
+  @Mock private ServiceAccountProvisioner serviceAccountProvisioner;
 
   private List<EnvVar> con1EnvVars;
   private List<EnvVar> con2EnvVars;
   private List<EnvVar> con3EnvVars;
+  private Map<String, String> wsAgentRouteAnnotations;
+
   private RhCheInfraEnvironmentProvisioner provisioner;
 
   @BeforeMethod
@@ -101,7 +118,11 @@ public class RhCheInfraEnvironmentProvisionerTest {
             tenantDataProvider,
             podTerminationGracePeriodProvisioner,
             imagePullSecretProvisioner,
-            false);
+            proxySettingsProvisioner,
+            serviceAccountProvisioner,
+            certificateProvisioner,
+            false,
+            WSAGENT_ROUTER_TIMEOUT);
 
     Pod pod1 = mock(Pod.class);
     Pod pod2 = mock(Pod.class);
@@ -110,12 +131,17 @@ public class RhCheInfraEnvironmentProvisionerTest {
     Container container1 = mock(Container.class);
     Container container2 = mock(Container.class);
     Container container3 = mock(Container.class);
+    Route wsAgentRoute = mock(Route.class);
+    ObjectMeta wsAgentRouteMetadata = mock(ObjectMeta.class);
+    wsAgentRouteAnnotations = new HashMap<>();
+    wsAgentRouteAnnotations.put("org.eclipse.che.server.wsagent/http.path", "/api");
 
-    when(runtimeIdentity.getOwnerId()).thenReturn(USER_ID);
+    lenient().when(runtimeIdentity.getOwnerId()).thenReturn(USER_ID);
     when(openshiftUserTokenProvider.getToken(eq(SUBJECT))).thenReturn(OSO_TOKEN);
     when(tenantDataProvider.getUserCheTenantData(eq(SUBJECT), eq("user")))
         .thenReturn(new UserCheTenantData(NAMESPACE, CLUSTER_URL, null, false));
     when(openShiftEnvironment.getPods()).thenReturn(of("pod1", pod1, "pod2", pod2));
+    when(openShiftEnvironment.getRoutes()).thenReturn(of("routeName", wsAgentRoute));
     when(pod1.getSpec()).thenReturn(podSpec1);
     when(pod2.getSpec()).thenReturn(podSpec2);
     when(podSpec1.getContainers()).thenReturn(singletonList(container1));
@@ -123,6 +149,8 @@ public class RhCheInfraEnvironmentProvisionerTest {
     when(container1.getEnv()).thenReturn(con1EnvVars);
     when(container2.getEnv()).thenReturn(con2EnvVars);
     when(container3.getEnv()).thenReturn(con3EnvVars);
+    when(wsAgentRoute.getMetadata()).thenReturn(wsAgentRouteMetadata);
+    when(wsAgentRouteMetadata.getAnnotations()).thenReturn(wsAgentRouteAnnotations);
 
     EnvironmentContext.getCurrent().setSubject(SUBJECT);
   }
@@ -135,6 +163,15 @@ public class RhCheInfraEnvironmentProvisionerTest {
     verifyOcLoginEnvVarsPresence(con2EnvVars);
     verifyOcLoginEnvVarsPresence(con3EnvVars);
     verify(tenantDataProvider).getUserCheTenantData(eq(SUBJECT), eq("user"));
+  }
+
+  @Test
+  public void shouldAnnotateWsAgentRouteWithTimeout() throws Exception {
+    provisioner.provision(openShiftEnvironment, runtimeIdentity);
+
+    assertTrue(wsAgentRouteAnnotations.containsKey("haproxy.router.openshift.io/timeout"));
+    assertEquals(
+        wsAgentRouteAnnotations.get("haproxy.router.openshift.io/timeout"), WSAGENT_ROUTER_TIMEOUT);
   }
 
   @Test
@@ -160,8 +197,9 @@ public class RhCheInfraEnvironmentProvisionerTest {
 
   @Test
   public void shouldNotThrowExceptionIfTokenFetchingFails() throws Exception {
-    when(openshiftUserTokenProvider.getToken(eq(SUBJECT)))
-        .thenThrow(new InfrastructureException("error"));
+    doThrow(new InfrastructureException("error"))
+        .when(openshiftUserTokenProvider)
+        .getToken(eq(SUBJECT));
 
     provisioner.provision(openShiftEnvironment, runtimeIdentity);
 
@@ -172,7 +210,7 @@ public class RhCheInfraEnvironmentProvisionerTest {
 
   @Test
   public void shouldNotThrowExceptionIfTokenIsNull() throws Exception {
-    when(openshiftUserTokenProvider.getToken(eq(SUBJECT))).thenReturn(null);
+    doReturn(null).when(openshiftUserTokenProvider).getToken(eq(SUBJECT));
 
     provisioner.provision(openShiftEnvironment, runtimeIdentity);
 
@@ -183,8 +221,9 @@ public class RhCheInfraEnvironmentProvisionerTest {
 
   @Test
   public void shouldNotThrowExceptionIfTenantDataFetchingFails() throws Exception {
-    when(tenantDataProvider.getUserCheTenantData(eq(SUBJECT), eq("user")))
-        .thenThrow(new InfrastructureException("error"));
+    doThrow(new InfrastructureException("error"))
+        .when(tenantDataProvider)
+        .getUserCheTenantData(eq(SUBJECT), eq("user"));
 
     provisioner.provision(openShiftEnvironment, runtimeIdentity);
 

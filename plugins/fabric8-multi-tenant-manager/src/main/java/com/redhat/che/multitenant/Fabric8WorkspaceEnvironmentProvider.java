@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
@@ -103,6 +104,7 @@ public class Fabric8WorkspaceEnvironmentProvider {
   }
 
   public Config getWorkspacesOpenshiftConfig(Subject subject) throws InfrastructureException {
+    Config config;
     checkSubject(subject);
     UserCheTenantData cheTenantData = getUserCheTenantData(subject);
     checkClusterCapacity(cheTenantData);
@@ -115,17 +117,22 @@ public class Fabric8WorkspaceEnvironmentProvider {
     }
 
     String userId = subject.getUserId();
-
     if (cheServiceAccountTokenToggle.useCheServiceAccountToken(userId)) {
+      String osoProxyUrl = multiClusterOpenShiftProxy.getUrl();
       LOG.debug("Using Che SA token for '{}'", userId);
-      String osoProxyUrl = multiClusterOpenShiftProxy.getUrlWithIdentityIdQueryParameter(userId);
-      configBuilder.withMasterUrl(osoProxyUrl).withOauthToken(cheServiceAccountToken);
+      config =
+          configBuilder.withMasterUrl(osoProxyUrl).withOauthToken(cheServiceAccountToken).build();
+      LOG.debug("Adding Impersonate Header '{}'", userId);
+      config.getRequestConfig().setImpersonateUsername(userId);
+      // hot-fix to avoid NPE in ImpersonatorInterceptor when optional `Impersonate-Group` is not
+      // set - https://github.com/fabric8io/kubernetes-client/issues/1266
+      config.getRequestConfig().setImpersonateGroups("dummyGroup");
     } else {
       String osoProxyUrl = multiClusterOpenShiftProxy.getUrl();
-      configBuilder.withMasterUrl(osoProxyUrl).withOauthToken(subject.getToken());
+      config = configBuilder.withMasterUrl(osoProxyUrl).withOauthToken(subject.getToken()).build();
     }
 
-    return configBuilder.build();
+    return config;
   }
 
   public String getWorkspacesOpenshiftNamespace(Subject subject) throws InfrastructureException {
@@ -152,6 +159,12 @@ public class Fabric8WorkspaceEnvironmentProvider {
   }
 
   private UserCheTenantData getUserCheTenantData(Subject subject) throws InfrastructureException {
+    if (subject instanceof GuessedSubject) {
+      GuessedSubject guessedSubject = (GuessedSubject) subject;
+      return new UserCheTenantData(
+          guessedSubject.getNamespace(), multiClusterOpenShiftProxy.getUrl(), "unknown", false);
+    }
+
     UserCheTenantData tenantData = tenantDataProvider.getUserCheTenantData(subject, "che");
     return new UserCheTenantData(
         tenantData.getNamespace(),

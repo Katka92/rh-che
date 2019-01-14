@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
@@ -25,6 +26,7 @@ import org.eclipse.che.api.core.rest.HttpJsonRequestFactory;
 import org.eclipse.che.api.languageserver.DefaultInstanceProvider;
 import org.eclipse.che.api.languageserver.LanguageServerConfig;
 import org.eclipse.che.api.languageserver.ProcessCommunicationProvider;
+import org.eclipse.che.api.project.server.impl.RootDirPathProvider;
 import org.eclipse.che.plugin.json.inject.JsonModule;
 import org.eclipse.che.plugin.languageserver.bayesian.BayesianLanguageServerModule;
 import org.slf4j.Logger;
@@ -39,14 +41,23 @@ public class BayesianLanguageServerConfig implements LanguageServerConfig {
 
   private final Path launchScript;
   private final HttpJsonRequestFactory httpJsonFactory;
+  private final RootDirPathProvider rootDirPathProvider;
   private final String apiEndpoint;
 
   @Inject
   public BayesianLanguageServerConfig(
-      HttpJsonRequestFactory httpJsonFactory, @Named("che.api") String apiEndpoint) {
+      RootDirPathProvider rootDirPathProvider,
+      HttpJsonRequestFactory httpJsonFactory,
+      @Named("che.api") String apiEndpoint) {
     this.httpJsonFactory = httpJsonFactory;
+    this.rootDirPathProvider = rootDirPathProvider;
     this.apiEndpoint = apiEndpoint;
     launchScript = Paths.get(System.getenv("HOME"), "che/ls-bayesian/launch.sh");
+  }
+
+  @Override
+  public String getProjectsRoot() {
+    return rootDirPathProvider.get();
   }
 
   @Override
@@ -55,9 +66,9 @@ public class BayesianLanguageServerConfig implements LanguageServerConfig {
       @Override
       public Map<String, String> getLanguageRegexes() {
         return ImmutableMap.<String, String>builder()
-            .put(BayesianLanguageServerModule.TXT_LANGUAGE_ID, ".*/requirements\\.txt$")
-            .put(JsonModule.LANGUAGE_ID, "./*package\\.json$")
-            .put("pom", ".*/pom\\.xml$")
+            .put(BayesianLanguageServerModule.TXT_LANGUAGE_ID, ".*requirements\\.txt")
+            .put(JsonModule.LANGUAGE_ID, ".*package\\.json")
+            .put("pom", ".*pom\\.xml")
             .build();
       }
 

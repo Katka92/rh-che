@@ -1,24 +1,32 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
  */
-
 package com.redhat.che.plugin.analytics.wsagent;
 
-import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.*;
-import static com.redhat.che.plugin.analytics.wsagent.EventProperties.*;
+import static com.google.common.collect.ImmutableMap.builder;
+import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.WORKSPACE_INACTIVE;
+import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.WORKSPACE_STARTED;
+import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.WORKSPACE_STOPPED;
+import static com.redhat.che.plugin.analytics.wsagent.AnalyticsEvent.WORKSPACE_USED;
+import static com.redhat.che.plugin.analytics.wsagent.EventProperties.WORKSPACE_ID;
+import static com.redhat.che.plugin.analytics.wsagent.EventProperties.WORKSPACE_NAME;
+import static java.lang.Long.parseLong;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.slf4j.LoggerFactory.getLogger;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -27,22 +35,33 @@ import com.google.inject.name.Named;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.messages.TrackMessage;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+import org.eclipse.che.api.core.model.workspace.Workspace;
 import org.eclipse.che.api.core.rest.HttpJsonRequestFactory;
+import org.eclipse.che.api.factory.shared.dto.FactoryDto;
+import org.eclipse.che.api.workspace.shared.Constants;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.slf4j.Logger;
 
@@ -57,14 +76,35 @@ public class AnalyticsManager {
   private static final Logger LOG = getLogger(AnalyticsManager.class);
 
   private static final String pingRequestFormat =
-      "http://www.woopra.com/track/ping?host={0}&cookie={1}&timeout={2}";
+      "http://www.woopra.com/track/ping?host={0}&cookie={1}&timeout={2}&ka={3}&ra={4}";
 
   private final Analytics analytics;
 
-  private final long noActivityTimeout = 60000 * 3;
-  private final long pingTimeout = 30 * 1000;
+  @VisibleForTesting static long pingTimeoutSeconds = 30;
+  @VisibleForTesting static long pingTimeout = pingTimeoutSeconds * 1000;
+
+  @VisibleForTesting long noActivityTimeout = 60000 * 3;
+
   private final String workspaceId;
-  private final String workspaceName;
+
+  @VisibleForTesting final String workspaceName;
+  @VisibleForTesting final String factoryId;
+  @VisibleForTesting final String stackId;
+  @VisibleForTesting final String factoryName;
+  @VisibleForTesting final String factoryOwner;
+  @VisibleForTesting final String factoryUrl;
+  @VisibleForTesting final String createdOn;
+  @VisibleForTesting final String updatedOn;
+  @VisibleForTesting final String stoppedOn;
+  @VisibleForTesting final String stoppedAbnormally;
+  @VisibleForTesting final String lastErrorMessage;
+  @VisibleForTesting final String osioSpaceId;
+  @VisibleForTesting final String sourceTypes;
+  @VisibleForTesting final String startNumber;
+
+  @VisibleForTesting final Long age;
+  @VisibleForTesting final Long returnDelay;
+  @VisibleForTesting final Boolean firstStart;
 
   private String segmentWriteKey;
   private String woopraDomain;
@@ -73,19 +113,23 @@ public class AnalyticsManager {
       Executors.newSingleThreadScheduledExecutor(
           new ThreadFactoryBuilder().setNameFormat("Analytics Activity Checker").build());
 
-  private ScheduledExecutorService networkExecutor =
+  @VisibleForTesting
+  ScheduledExecutorService networkExecutor =
       Executors.newSingleThreadScheduledExecutor(
           new ThreadFactoryBuilder().setNameFormat("Analytics Network Request Submitter").build());
 
-  private LoadingCache<String, EventDispatcher> dispatchers;
+  @VisibleForTesting LoadingCache<String, EventDispatcher> dispatchers;
 
-  private String workspaceStartingUserId = null;
+  @VisibleForTesting String workspaceStartingUserId = null;
+  @VisibleForTesting HttpUrlConnectionProvider httpUrlConnectionProvider = null;
 
   @Inject
   public AnalyticsManager(
       @Named("env.CHE_WORKSPACE_ID") String workspaceId,
       HttpJsonRequestFactory requestFactory,
-      @Named("che.api") String apiEndpoint) {
+      @Named("che.api") String apiEndpoint,
+      AnalyticsProvider analyticsProvider,
+      HttpUrlConnectionProvider httpUrlConnectionProvider) {
     try {
       String endpoint = apiEndpoint + "/fabric8-che-analytics/segment-write-key";
       segmentWriteKey = requestFactory.fromUrl(endpoint).request().asString();
@@ -98,15 +142,100 @@ public class AnalyticsManager {
 
     try {
       String endpoint = apiEndpoint + "/workspace/" + workspaceId;
-      workspaceName =
-          requestFactory
-              .fromUrl(endpoint)
-              .request()
-              .asDto(WorkspaceDto.class)
-              .getConfig()
-              .getName();
+
+      Workspace workspace = requestFactory.fromUrl(endpoint).request().asDto(WorkspaceDto.class);
+
+      createdOn = workspace.getAttributes().get(Constants.CREATED_ATTRIBUTE_NAME);
+      updatedOn = workspace.getAttributes().get(Constants.UPDATED_ATTRIBUTE_NAME);
+      stoppedOn = workspace.getAttributes().get(Constants.STOPPED_ATTRIBUTE_NAME);
+      stoppedAbnormally =
+          workspace.getAttributes().get(Constants.STOPPED_ABNORMALLY_ATTRIBUTE_NAME);
+      lastErrorMessage = workspace.getAttributes().get(Constants.ERROR_MESSAGE_ATTRIBUTE_NAME);
+      sourceTypes = workspace.getAttributes().get("sourceTypes");
+      startNumber = workspace.getAttributes().get("startNumber");
+
+      Long createDate = null;
+      Long updateDate = null;
+      Long stopDate = null;
+      try {
+        createDate = parseLong(createdOn);
+      } catch (NumberFormatException nfe) {
+        LOG.warn("the create timestamp ( " + createdOn + " ) has invalid format", nfe);
+      }
+      try {
+        updateDate = parseLong(updatedOn);
+      } catch (NumberFormatException nfe) {
+        LOG.warn("the update timestamp ( " + updatedOn + " ) has invalid format", nfe);
+      }
+      if (stoppedOn != null) {
+        try {
+          stopDate = parseLong(stoppedOn);
+        } catch (NumberFormatException nfe) {
+          LOG.warn("the stop timestamp ( " + stoppedOn + " ) has invalid format", nfe);
+        }
+      }
+
+      if (updateDate != null && createDate != null) {
+        age = (updateDate - createDate) / 1000;
+      } else {
+        age = null;
+      }
+      if (updateDate != null && stopDate != null) {
+        returnDelay = (updateDate - stopDate) / 1000;
+      } else {
+        returnDelay = null;
+      }
+      if (updateDate != null) {
+        firstStart = stopDate == null;
+      } else {
+        firstStart = null;
+      }
+
+      stackId = workspace.getAttributes().get("stackId");
+      factoryId = workspace.getAttributes().get("factoryId");
+      if (factoryId != null && !"undefined".equals(factoryId)) {
+        endpoint = apiEndpoint + "/factory/" + factoryId;
+
+        FactoryDto factory = null;
+        try {
+          factory = requestFactory.fromUrl(endpoint).request().asDto(FactoryDto.class);
+        } catch (Exception e) {
+          LOG.warn(
+              "Can't get workspace factory ('" + factoryId + "') informations for Che analytics",
+              e);
+        }
+        if (factory != null) {
+          factoryName = factory.getName();
+          factoryOwner = factory.getCreator().getName();
+        } else {
+          factoryName = null;
+          factoryOwner = null;
+        }
+        factoryUrl = null;
+      } else {
+        String parametersPrefix = "factory.parameter.";
+        Map<String, String> configAttributes = workspace.getConfig().getAttributes();
+        if (configAttributes.containsKey(parametersPrefix + "name")) {
+          factoryName = configAttributes.get(parametersPrefix + "name");
+        } else {
+          factoryName = null;
+        }
+        if (configAttributes.containsKey(parametersPrefix + "user")) {
+          factoryOwner = configAttributes.get(parametersPrefix + "user");
+        } else {
+          factoryOwner = null;
+        }
+        if (configAttributes.containsKey(parametersPrefix + "url")) {
+          factoryUrl = configAttributes.get(parametersPrefix + "url");
+        } else {
+          factoryUrl = null;
+        }
+      }
+      osioSpaceId = workspace.getAttributes().get("osio_spaceId");
+
+      workspaceName = workspace.getConfig().getName();
     } catch (Exception e) {
-      throw new RuntimeException("Can't get workspace name for Che analytics", e);
+      throw new RuntimeException("Can't get workspace informations for Che analytics", e);
     }
 
     if (!segmentWriteKey.isEmpty() && woopraDomain.isEmpty()) {
@@ -115,21 +244,33 @@ public class AnalyticsManager {
     }
 
     if (isEnabled()) {
-      analytics =
-          Analytics.builder(segmentWriteKey)
-              .networkExecutor(networkExecutor)
-              .flushQueueSize(1)
-              .build();
+      this.httpUrlConnectionProvider = httpUrlConnectionProvider;
+
+      analytics = analyticsProvider.getAnalytics(segmentWriteKey, networkExecutor);
     } else {
       analytics = null;
     }
 
     this.workspaceId = workspaceId;
 
-    checkActivityExecutor.scheduleAtFixedRate(this::checkActivity, 20, 20, SECONDS);
+    long checkActivityPeriod = pingTimeoutSeconds / 2;
+
+    LOG.debug("CheckActivityPeriod: {}", checkActivityPeriod);
+
+    checkActivityExecutor.scheduleAtFixedRate(
+        this::checkActivity, checkActivityPeriod, checkActivityPeriod, SECONDS);
 
     dispatchers =
         CacheBuilder.newBuilder()
+            .expireAfterAccess(1, TimeUnit.HOURS)
+            .maximumSize(10)
+            .removalListener(
+                (RemovalNotification<String, EventDispatcher> n) -> {
+                  EventDispatcher dispatcher = n.getValue();
+                  if (dispatcher != null) {
+                    dispatcher.close();
+                  }
+                })
             .build(CacheLoader.<String, EventDispatcher>from(userId -> newEventDispatcher(userId)));
   }
 
@@ -171,33 +312,28 @@ public class AnalyticsManager {
                   return;
                 }
                 LOG.debug(
-                    "Skip sending 'WORKSPACE_INACTIVE' event for user: {} since it is the same event as the previous one",
+                    "Skipped sending 'WORKSPACE_INACTIVE' event for user: {} since it is the same event as the previous one",
                     dispatcher.getUserId());
-              } else {
-                synchronized (dispatcher) {
-                  AnalyticsEvent lastEvent = dispatcher.getLastEvent();
-                  if (lastEvent == null) {
-                    return;
-                  }
+                return;
+              }
+              synchronized (dispatcher) {
+                AnalyticsEvent lastEvent = dispatcher.getLastEvent();
+                if (lastEvent == null) {
+                  return;
+                }
 
-                  long expectedDuration = lastEvent.getExpectedDurationSeconds() * 1000;
-                  if (lastEvent == WORKSPACE_INACTIVE
-                      || (expectedDuration >= 0
-                          && System.currentTimeMillis()
-                              > expectedDuration + dispatcher.getLastEventTime())) {
-                    if (dispatcher.sendTrackEvent(
-                            WORKSPACE_USED,
-                            Collections.emptyMap(),
-                            dispatcher.getLastIp(),
-                            dispatcher.getLastUserAgent())
-                        != null) {
-                      return;
-                    }
-                  }
+                long expectedDuration = lastEvent.getExpectedDurationSeconds() * 1000;
+                if (lastEvent == WORKSPACE_INACTIVE
+                    || (expectedDuration >= 0
+                        && System.currentTimeMillis()
+                            > expectedDuration + dispatcher.getLastEventTime())) {
+                  dispatcher.sendTrackEvent(
+                      WORKSPACE_USED,
+                      Collections.emptyMap(),
+                      dispatcher.getLastIp(),
+                      dispatcher.getLastUserAgent());
                 }
               }
-
-              networkExecutor.submit(dispatcher::sendPingRequest);
             });
   }
 
@@ -226,27 +362,55 @@ public class AnalyticsManager {
     ;
   }
 
-  private class EventDispatcher {
+  @VisibleForTesting
+  class EventDispatcher {
 
-    private String userId;
-    private String cookie;
+    @VisibleForTesting String userId;
+    @VisibleForTesting String cookie;
 
     private AnalyticsEvent lastEvent = null;
-    private Map<String, Object> lastEventProperties = null;
+    @VisibleForTesting Map<String, Object> lastEventProperties = null;
     private long lastActivityTime;
     private long lastEventTime;
     private String lastIp = null;
     private String lastUserAgent = null;
+    private ScheduledFuture<?> pinger = null;
 
     private Map<String, Object> commonProperties;
 
     EventDispatcher(String userId, AnalyticsManager manager) {
       this.userId = userId;
-      this.commonProperties =
-          ImmutableMap.<String, Object>of(
-              WORKSPACE_ID, workspaceId,
-              WORKSPACE_NAME, workspaceName);
-      this.cookie =
+      ImmutableMap.Builder<String, Object> commonPropertiesBuilder = builder();
+
+      commonPropertiesBuilder.put(WORKSPACE_ID, workspaceId);
+      commonPropertiesBuilder.put(WORKSPACE_NAME, workspaceName);
+
+      Arrays.asList(
+              new SimpleImmutableEntry<>(EventProperties.CREATED, createdOn),
+              new SimpleImmutableEntry<>(EventProperties.UPDATED, updatedOn),
+              new SimpleImmutableEntry<>(EventProperties.STOPPED, stoppedOn),
+              new SimpleImmutableEntry<>(EventProperties.AGE, age),
+              new SimpleImmutableEntry<>(EventProperties.RETURN_DELAY, returnDelay),
+              new SimpleImmutableEntry<>(EventProperties.FIRST_START, firstStart),
+              new SimpleImmutableEntry<>(EventProperties.STACK_ID, stackId),
+              new SimpleImmutableEntry<>(EventProperties.FACTORY_ID, factoryId),
+              new SimpleImmutableEntry<>(EventProperties.FACTORY_NAME, factoryName),
+              new SimpleImmutableEntry<>(EventProperties.FACTORY_URL, factoryUrl),
+              new SimpleImmutableEntry<>(EventProperties.FACTORY_OWNER, factoryOwner),
+              new SimpleImmutableEntry<>(EventProperties.LAST_WORKSPACE_FAILED, stoppedAbnormally),
+              new SimpleImmutableEntry<>(EventProperties.LAST_WORKSPACE_FAILURE, lastErrorMessage),
+              new SimpleImmutableEntry<>(EventProperties.OSIO_SPACE_ID, osioSpaceId),
+              new SimpleImmutableEntry<>(EventProperties.SOURCE_TYPES, sourceTypes),
+              new SimpleImmutableEntry<>(EventProperties.START_NUMBER, startNumber))
+          .forEach(
+              (entry) -> {
+                if (entry.getValue() != null) {
+                  commonPropertiesBuilder.put(entry.getKey(), entry.getValue());
+                }
+              });
+
+      commonProperties = commonPropertiesBuilder.build();
+      cookie =
           Hashing.md5()
               .hashString(workspaceId + userId + System.currentTimeMillis(), StandardCharsets.UTF_8)
               .toString();
@@ -258,17 +422,23 @@ public class AnalyticsManager {
       lastActivityTime = System.currentTimeMillis();
     }
 
-    void sendPingRequest() {
+    void sendPingRequest(boolean retrying) {
+      boolean failed = false;
       try {
-        URI uri =
-            new URI(
-                MessageFormat.format(
-                    pingRequestFormat,
-                    URLEncoder.encode(woopraDomain, "UTF-8"),
-                    URLEncoder.encode(cookie, "UTF-8"),
-                    Long.toString(pingTimeout)));
-        LOG.debug("Sending a PING request to woopra for user '{}': {}", getUserId(), uri);
-        HttpURLConnection httpURLConnection = (HttpURLConnection) uri.toURL().openConnection();
+        String uri =
+            MessageFormat.format(
+                pingRequestFormat,
+                URLEncoder.encode(woopraDomain, "UTF-8"),
+                URLEncoder.encode(cookie, "UTF-8"),
+                Long.toString(pingTimeout),
+                Long.toString(pingTimeout),
+                UUID.randomUUID().toString());
+        LOG.debug(
+            "Sending a PING request to woopra for user '{}' and cookie {} : {}",
+            getUserId(),
+            cookie,
+            uri);
+        HttpURLConnection httpURLConnection = httpUrlConnectionProvider.getHttpUrlConnection(uri);
 
         String responseMessage;
         try (BufferedReader br =
@@ -281,12 +451,29 @@ public class AnalyticsManager {
           }
           responseMessage = sw.toString();
         }
-        LOG.debug("Woopra PING response for user '{}': {}", userId, responseMessage);
-        if (responseMessage == null || !responseMessage.toString().contains("success: true")) {
-          LOG.warn("Cannot ping woopra: response message : {}", responseMessage);
+        LOG.debug(
+            "Woopra PING response for user '{}' and cookie {} : {}",
+            userId,
+            cookie,
+            responseMessage);
+        if (responseMessage == null) {
+          failed = true;
+        }
+        if (!responseMessage.toString().contains("success: true")
+            && !responseMessage.toString().contains("success: queued")) {
+          failed = true;
+        }
+        if (failed) {
+          LOG.warn(
+              "Cannot ping woopra for cookie {} - response message : {}", cookie, responseMessage);
         }
       } catch (Exception e) {
         LOG.warn("Cannot ping woopra", e);
+        failed = true;
+      }
+
+      if (failed && lastEvent != null) {
+        sendTrackEvent(lastEvent, lastEventProperties, getLastIp(), getLastUserAgent(), true);
       }
     }
 
@@ -316,13 +503,22 @@ public class AnalyticsManager {
 
     String sendTrackEvent(
         AnalyticsEvent event, final Map<String, Object> properties, String ip, String userAgent) {
+      return sendTrackEvent(event, properties, ip, userAgent, false);
+    }
+
+    String sendTrackEvent(
+        AnalyticsEvent event,
+        final Map<String, Object> properties,
+        String ip,
+        String userAgent,
+        boolean force) {
       String eventId;
       lastIp = ip;
       lastUserAgent = userAgent;
       final String theIp = ip != null ? ip : "0.0.0.0";
       synchronized (this) {
         lastEventTime = System.currentTimeMillis();
-        if (areEventsEqual(event, properties)) {
+        if (!force && areEventsEqual(event, properties)) {
           LOG.debug("Skipping event " + event.toString() + " since it is the same as the last one");
           return null;
         }
@@ -332,10 +528,9 @@ public class AnalyticsManager {
             TrackMessage.builder(event.toString()).userId(userId).messageId(eventId);
 
         ImmutableMap.Builder<String, Object> integrationBuilder =
-            ImmutableMap.<String, Object>builder().put("cookie", cookie);
-        if (event.getExpectedDurationSeconds() == 0) {
-          integrationBuilder.put("duration", 0);
-        }
+            ImmutableMap.<String, Object>builder()
+                .put("cookie", cookie)
+                .put("timeout", pingTimeout);
         messageBuilder.integrationOptions("Woopra", integrationBuilder.build());
 
         ImmutableMap.Builder<String, Object> propertiesBuilder =
@@ -365,6 +560,17 @@ public class AnalyticsManager {
 
         lastEvent = event;
         lastEventProperties = properties;
+
+        long pingPeriod = pingTimeoutSeconds / 3 + 2;
+
+        if (pinger != null) {
+          pinger.cancel(true);
+        }
+
+        LOG.debug("scheduling ping request with the following delay: " + pingPeriod);
+        pinger =
+            networkExecutor.scheduleAtFixedRate(
+                () -> sendPingRequest(false), pingPeriod, pingPeriod, TimeUnit.SECONDS);
       }
       return eventId;
     }
@@ -392,6 +598,13 @@ public class AnalyticsManager {
     long getLastEventTime() {
       return lastEventTime;
     }
+
+    void close() {
+      if (pinger != null) {
+        pinger.cancel(true);
+      }
+      pinger = null;
+    }
   }
 
   @PreDestroy
@@ -408,6 +621,39 @@ public class AnalyticsManager {
       } catch (ExecutionException e) {
       }
     }
+    shutdown();
+  }
+
+  void shutdown() {
     checkActivityExecutor.shutdown();
+    if (analytics != null) {
+      analytics.shutdown();
+    }
+  }
+}
+
+/**
+ * Returns an {@link Analytics} object from a Segment write Key.
+ *
+ * @author David Festal
+ */
+class AnalyticsProvider {
+  public Analytics getAnalytics(String segmentWriteKey, ExecutorService networkExecutor) {
+    return Analytics.builder(segmentWriteKey)
+        .networkExecutor(networkExecutor)
+        .flushQueueSize(1)
+        .build();
+  }
+}
+
+/**
+ * Returns a {@link HttpURLConnection} object from a {@link URI}.
+ *
+ * @author David Festal
+ */
+class HttpUrlConnectionProvider {
+  public HttpURLConnection getHttpUrlConnection(String uri)
+      throws MalformedURLException, IOException, URISyntaxException {
+    return (HttpURLConnection) new URI(uri).toURL().openConnection();
   }
 }

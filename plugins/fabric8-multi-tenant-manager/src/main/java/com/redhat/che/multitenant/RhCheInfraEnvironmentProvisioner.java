@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2016-2018 Red Hat, Inc.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
@@ -27,12 +28,15 @@ import org.eclipse.che.api.workspace.server.spi.provision.env.EnvVarProvider;
 import org.eclipse.che.commons.env.EnvironmentContext;
 import org.eclipse.che.commons.subject.Subject;
 import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.WorkspaceVolumesStrategy;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.CertificateProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ImagePullSecretProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.InstallerServersPortProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.LogsVolumeMachineProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.PodTerminationGracePeriodProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ProxySettingsProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.ServiceAccountProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.env.EnvVarsConverter;
-import org.eclipse.che.workspace.infrastructure.kubernetes.provision.limits.ram.RamLimitProvisioner;
+import org.eclipse.che.workspace.infrastructure.kubernetes.provision.limits.ram.RamLimitRequestProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.restartpolicy.RestartPolicyRewriter;
 import org.eclipse.che.workspace.infrastructure.kubernetes.provision.server.ServersConverter;
 import org.eclipse.che.workspace.infrastructure.openshift.OpenShiftEnvironmentProvisioner;
@@ -61,6 +65,7 @@ public class RhCheInfraEnvironmentProvisioner extends OpenShiftEnvironmentProvis
   private final OpenshiftUserTokenProvider openshiftUserTokenProvider;
   private final TenantDataProvider tenantDataProvider;
   private boolean trustCerts;
+  private String wsAgentRoutingTimeout;
 
   @Inject
   public RhCheInfraEnvironmentProvisioner(
@@ -71,14 +76,18 @@ public class RhCheInfraEnvironmentProvisioner extends OpenShiftEnvironmentProvis
       EnvVarsConverter envVarsConverter,
       RestartPolicyRewriter restartPolicyRewriter,
       WorkspaceVolumesStrategy volumesStrategy,
-      RamLimitProvisioner ramLimitProvisioner,
+      RamLimitRequestProvisioner ramLimitProvisioner,
       InstallerServersPortProvisioner installerServersPortProvisioner,
       LogsVolumeMachineProvisioner logsVolumeMachineProvisioner,
       OpenshiftUserTokenProvider openshiftUserTokenProvider,
       TenantDataProvider tenantDataProvider,
       PodTerminationGracePeriodProvisioner podTerminationGracePeriodProvisioner,
       ImagePullSecretProvisioner imagePullSecretProvisioner,
-      @Named("che.infra.kubernetes.trust_certs") boolean trustCerts) {
+      ProxySettingsProvisioner proxySettingsProvisioner,
+      ServiceAccountProvisioner serviceAccountProvisioner,
+      CertificateProvisioner certificateProvisioner,
+      @Named("che.infra.kubernetes.trust_certs") boolean trustCerts,
+      @Named("che.fabric8.wsagent_routing_timeout") String wsAgentRoutingTimeout) {
     super(
         pvcEnabled,
         uniqueNamesProvisioner,
@@ -91,11 +100,15 @@ public class RhCheInfraEnvironmentProvisioner extends OpenShiftEnvironmentProvis
         installerServersPortProvisioner,
         logsVolumeMachineProvisioner,
         podTerminationGracePeriodProvisioner,
-        imagePullSecretProvisioner);
+        imagePullSecretProvisioner,
+        proxySettingsProvisioner,
+        serviceAccountProvisioner,
+        certificateProvisioner);
 
     this.openshiftUserTokenProvider = openshiftUserTokenProvider;
     this.tenantDataProvider = tenantDataProvider;
     this.trustCerts = trustCerts;
+    this.wsAgentRoutingTimeout = wsAgentRoutingTimeout;
   }
 
   @Override
@@ -116,6 +129,16 @@ public class RhCheInfraEnvironmentProvisioner extends OpenShiftEnvironmentProvis
       // oc login injection is not critical - lets continue start of the workspace if failed
       LOG.error(e.getLocalizedMessage());
     }
+
+    osEnv
+        .getRoutes()
+        .forEach(
+            (name, route) -> {
+              Map<String, String> annotations = route.getMetadata().getAnnotations();
+              if (annotations.containsKey("org.eclipse.che.server.wsagent/http.path")) {
+                annotations.put("haproxy.router.openshift.io/timeout", wsAgentRoutingTimeout);
+              }
+            });
   }
 
   private void addTokenEnvVar(Map<String, String> envVars, Subject subject)

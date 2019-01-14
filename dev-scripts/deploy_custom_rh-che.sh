@@ -23,9 +23,11 @@ usage="\\033[93;1m$(basename "$0") \\033[0;1m[-u <username>] [-p <passwd>] [-o <
     \\033[1m-h\\033[0m  show this help text
     \\033[1m-n\\033[0m  do not delete files after script finishes
     \\033[1m-s\\033[0m  wipe sql database (postgres)
+    \\033[1m-S\\033[0m  apply secret for oc
     \\033[1m-t\\033[0m  [\\033[1mdefault=latest\\033[0m] tag for specific build (first 7 characters of commit hash)
     \\033[1m-r\\033[0m  docker image registry from where to pull
     \\033[1m-z\\033[0m  run this script as a standalone self-contained application
+    \\033[1m-U\\033[0m  use unsecure route (do not annotate route)
 
 \\033[32;1mrequirements\\033[0m:
     \\033[1moc\\033[0m  openshift origin CLI admin (dnf install origin-clients)
@@ -36,14 +38,16 @@ export RH_CHE_DEPLOY_SCRIPT_CLEANUP="true";
 export RH_CHE_WIPE_SQL="false";
 export RH_CHE_IS_V_FIVE="false";
 export RH_CHE_OPENSHIFT_USE_TOKEN="false";
-export RH_CHE_OPENSHIFT_URL=https://dev.rdu2c.fabric8.io:8443;
+export RH_CHE_OPENSHIFT_URL=https://devtools-dev.ext.devshift.net:8443;
 export RH_CHE_JDBC_USERNAME=pgche;
 export RH_CHE_JDBC_PASSWORD=pgchepassword;
 export RH_CHE_JDBC_URL=jdbc:postgresql://postgres:5432/dbche;
 export RH_CHE_RUNNING_STANDALONE_SCRIPT="false";
+export RH_CHE_USE_TLS="true"
+export RH_CHE_APPLY_SECRET="false"
 
 export RH_CHE_DOCKER_IMAGE_TAG="latest";
-export RH_CHE_DOCKER_REPOSITORY="registry.devshift.net/che/rh-che-server";
+export RH_CHE_DOCKER_REPOSITORY="quay.io/openshiftio/che-rh-che-server";
 export RH_CHE_GITHUB_BRANCH=master;
 
 function unsetVars() {
@@ -67,6 +71,9 @@ function unsetVars() {
   unset POSTGRES_STATUS_AVAILABLE;
   unset RH_CHE_STATUS_PROGRESS;
   unset RH_CHE_STATUS_AVAILABLE;
+  unset RH_CHE_USE_TLS;
+  unset RH_CHE_APPLY_SECRET;
+  unset RH_CHE_OC_SECRET;
 }
 
 function clearEnv() {
@@ -132,7 +139,7 @@ function deployPostgres() {
 }
 
 # Parse commandline flags
-while getopts ':hnsu:p:r:t:o:e:b:z' option; do
+while getopts ':hnu:szUS:b:e:r:t:o:p:' option; do
   case "$option" in
     h) echo -e "$usage"
        exit 0
@@ -157,7 +164,12 @@ while getopts ':hnsu:p:r:t:o:e:b:z' option; do
     b) export RH_CHE_GITHUB_BRANCH=$OPTARG
        ;;
     z) export RH_CHE_RUNNING_STANDALONE_SCRIPT="true"
-       ;; 
+       ;;
+    U) export RH_CHE_USE_TLS="false"
+       ;;
+    S) export RH_CHE_APPLY_SECRET="true"
+       export RH_CHE_OC_SECRET=$OPTARG
+       ;;
     :) echo -e "\\033[91;1mMissing argument for -$OPTARG\\033[0m" >&2
        echo -e "$usage" >&2
        unsetVars
@@ -208,7 +220,7 @@ else
   fi
 fi
 export RH_CHE_PROJECT_NAMESPACE=${RH_CHE_PROJECT_NAMESPACE:-$(oc whoami)-che6-automated}
-echo -e "\\033[92;1mLogin successful, creating project \\033[34m$RH_CHE_PROJECT_NAMESPACE\\033[0;38;5;238m";
+echo -e "Login successful, creating project $RH_CHE_PROJECT_NAMESPACE";
 
 # CREATE PROJECT
 if oc project "${RH_CHE_PROJECT_NAMESPACE}" > /dev/null 2>&1;
@@ -253,13 +265,14 @@ if [ "${RH_CHE_RUNNING_STANDALONE_SCRIPT}" == "true" ]; then
     exit 2
   fi
 else
-  RH_CHE_APP="./../openshift/rh-che.app.yaml"
-  RH_CHE_CONFIG="./../openshift/rh-che.config.yaml"
+  ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  RH_CHE_APP="${ABSOLUTE_PATH}/../openshift/rh-che.app.yaml"
+  RH_CHE_CONFIG="${ABSOLUTE_PATH}/../openshift/rh-che.config.yaml"
 fi
 
 echo -e "\\033[92;1mGetting deployment scripts done.\\033[0m"
 
-# DEPLOY POSTRES
+# DEPLOY POSTGRES
 if [ "$RH_CHE_WIPE_SQL" == "true" ]; then
   if (oc get dc postgres > /dev/null 2>&1); then
     waitForPostgresToBeDeleted
@@ -275,26 +288,33 @@ if (oc get dc rhche > /dev/null 2>&1); then
   waitForCheToBeDeleted
 fi
 
+if [ "${RH_CHE_USE_TLS}" == "true" ]; then
+  SECURE="s"
+else
+  SECURE=""
+fi
+
 # APPLY CHE CONFIGMAP
-CHE_CONFIG_YAML=$(yq ".\"data\".\"che-keycloak-realm\" = \"NULL\" | 
-                      .\"data\".\"che-keycloak-auth-server-url\" = \"NULL\" | 
-                      .\"data\".\"che-keycloak-use-nonce\" = \"false\" | 
-                      .\"data\".\"che-keycloak-client-id\" = \"740650a2-9c44-4db5-b067-a3d1b2cd2d01\" | 
-                      .\"data\".\"che-keycloak-oidc-provider\" = \"https://auth.prod-preview.openshift.io/api\" | 
-                      .\"data\".\"keycloak-github-endpoint\" = \"https://auth.prod-preview.openshift.io/api/token?for=https://github.com\" | 
-                      .\"data\".\"service.account.secret\" = \"\" | 
-                      .\"data\".\"service.account.id\" = \"\" | 
-                      .\"data\".\"che.jdbc.username\" = \"$RH_CHE_JDBC_USERNAME\" | 
-                      .\"data\".\"che.jdbc.password\" = \"$RH_CHE_JDBC_PASSWORD\" | 
-                      .\"data\".\"che.jdbc.url\" = \"$RH_CHE_JDBC_URL\" | 
-                      .\"data\".\"logs-encoding\" = \"plaintext\" " ${RH_CHE_CONFIG})
+CHE_CONFIG_YAML=$(yq ".\"data\".\"CHE_KEYCLOAK_REALM\" = \"NULL\" |
+                      .\"data\".\"CHE_KEYCLOAK_AUTH__SERVER__URL\" = \"NULL\" |
+                      .\"data\".\"CHE_KEYCLOAK_USE__NONCE\" = \"false\" |
+                      .\"data\".\"CHE_KEYCLOAK_CLIENT__ID\" = \"740650a2-9c44-4db5-b067-a3d1b2cd2d01\" |
+                      .\"data\".\"CHE_KEYCLOAK_OIDC__PROVIDER\" = \"https://auth.prod-preview.openshift.io/api\" |
+                      .\"data\".\"CHE_KEYCLOAK_GITHUB_ENDPOINT\" = \"https://auth.prod-preview.openshift.io/api/token?for=https://github.com\" |
+                      .\"data\".\"service.account.secret\" = \"\" |
+                      .\"data\".\"service.account.id\" = \"\" |
+                      .\"data\".\"che.jdbc.username\" = \"$RH_CHE_JDBC_USERNAME\" |
+                      .\"data\".\"che.jdbc.password\" = \"$RH_CHE_JDBC_PASSWORD\" |
+                      .\"data\".\"che.jdbc.url\" = \"$RH_CHE_JDBC_URL\" |
+                      .\"data\".\"CHE_LOG_LEVEL\" = \"plaintext\" " ${RH_CHE_CONFIG})
 
 CHE_CONFIG_YAML=$(echo "$CHE_CONFIG_YAML" | \
-                  yq ".\"data\".\"che-host\" = \"rhche-$RH_CHE_PROJECT_NAMESPACE.dev.rdu2c.fabric8.io\" |
-                      .\"data\".\"infra-bootstrapper-binary-url\" = \"https://rhche-$RH_CHE_PROJECT_NAMESPACE.dev.rdu2c.fabric8.io/agent-binaries/linux_amd64/bootstrapper/bootstrapper\" |
-                      .\"data\".\"che-api\" = \"https://rhche-$RH_CHE_PROJECT_NAMESPACE.dev.rdu2c.fabric8.io/api\" |
-                      .\"data\".\"che-websocket-endpoint\" = \"wss://rhche-$RH_CHE_PROJECT_NAMESPACE.dev.rdu2c.fabric8.io/api/websocket\" |
-                      .\"metadata\".\"name\" = \"rhche\" ")
+                  yq ".\"data\".\"CHE_HOST\" = \"rhche-$RH_CHE_PROJECT_NAMESPACE.devtools-dev.ext.devshift.net\" |
+                      .\"data\".\"CHE_INFRA_KUBERNETES_BOOTSTRAPPER_BINARY__URL\" = \"http$SECURE://rhche-$RH_CHE_PROJECT_NAMESPACE.devtools-dev.ext.devshift.net/agent-binaries/linux_amd64/bootstrapper/bootstrapper\" |
+                      .\"data\".\"CHE_API\" = \"http$SECURE://rhche-$RH_CHE_PROJECT_NAMESPACE.devtools-dev.ext.devshift.net/api\" |
+                      .\"data\".\"CHE_WEBSOCKET_ENDPOINT\" = \"ws$SECURE://rhche-$RH_CHE_PROJECT_NAMESPACE.devtools-dev.ext.devshift.net/api/websocket\" |
+                      .\"metadata\".\"name\" = \"rhche\" |
+                      .\"data\".\"CHE_INFRA_OPENSHIFT_TLS__ENABLED\" = \"$RH_CHE_USE_TLS\" ")
 
 if ! (echo "$CHE_CONFIG_YAML" | oc apply -f - > /dev/null 2>&1); then
   echo -e "\\033[91;1mFailed to apply configmap [$?].\\033[0m"
@@ -306,7 +326,7 @@ echo -e "\\033[92;1mChe config deployed on \\033[34m${RH_CHE_PROJECT_NAMESPACE}\
 CHE_APP_CONFIG_YAML=$(yq "" ${RH_CHE_APP})
 CHE_APP_CONFIG_YAML=$(echo "$CHE_APP_CONFIG_YAML" | \
                       yq "(.parameters[] | select(.name == \"IMAGE\").value) |= \"$RH_CHE_DOCKER_REPOSITORY\" |
-                          (.parameters[] | select(.name == \"IMAGE_TAG\").value) |= \"$RH_CHE_DOCKER_IMAGE_TAG\" | 
+                          (.parameters[] | select(.name == \"IMAGE_TAG\").value) |= \"$RH_CHE_DOCKER_IMAGE_TAG\" |
                           (.objects[] | select(.kind == \"DeploymentConfig\").spec.template.spec.containers[0].imagePullPolicy) |= \"Always\"")
 
 CHE_APP_CONFIG_YAML=$(echo "$CHE_APP_CONFIG_YAML" | \
@@ -321,9 +341,20 @@ CHE_APP_CONFIG_YAML=$(echo "$CHE_APP_CONFIG_YAML" | \
                           (.objects[] | select(.kind == \"DeploymentConfig\").spec.template.spec.containers[0].env[] |
                            select(.name == \"CHE_JDBC_USERNAME\").valueFrom) |= {\"configMapKeyRef\":{\"key\":\"che.jdbc.username\",\"name\":\"rhche\"}}")
 
+if [ "${RH_CHE_USE_TLS}" != "true" ]; then
+  CHE_APP_CONFIG_YAML=$(echo "$CHE_APP_CONFIG_YAML" | yq "del (.objects[] | select(.kind == \"Route\").spec.tls)")
+fi
+
 if ! (echo "$CHE_APP_CONFIG_YAML" | oc process -f - | oc apply -f - > /dev/null 2>&1); then
   echo -e "\\033[91;1mFailed to process che config [$?]\\033[0m"
   exit 5
+fi
+
+# APPLY SECRET IF REQUESTED
+if [ "$RH_CHE_APPLY_SECRET" == "true" ]; then
+  echo "$RH_CHE_OC_SECRET" | oc apply -f -
+  oc secrets link default quay-dev-deployer --for=pull
+  oc secrets link rhche quay-dev-deployer --for=pull
 fi
 
 CHE_STARTUP_TIMEOUT=300
@@ -335,11 +366,19 @@ while [[ "${RH_CHE_STATUS_PROGRESS}" != "\"True\"" || "${RH_CHE_STATUS_AVAILABLE
 done
 if [ ${CHE_STARTUP_TIMEOUT} == 0 ]; then
   echo -e "\\033[91;1mFailed to start che-server: timed out\\033[0m"
+  echo -e "Getting events from deployment:"
+  oc get events -n ${RH_CHE_PROJECT_NAMESPACE}
   exit 1
 fi
 
-oc annotate --overwrite=true route/rhche kubernetes.io/tls-acme=true
-echo -e "\\033[92;1mSUCCESS: Rh-Che deployed on \\033[34mhttps://rhche-$RH_CHE_PROJECT_NAMESPACE.dev.rdu2c.fabric8.io/\\033[0m"
+if [ "${RH_CHE_USE_TLS}" == "true" ]; then
+  echo -e "Annotating route"
+  oc annotate --overwrite=true route/rhche kubernetes.io/tls-acme=true
+else
+  echo -e "Annotating route skipped"
+fi
+
+echo -e "\\033[92;1mSUCCESS: Rh-Che deployed on \\033[34mhttp$SECURE://rhche-$RH_CHE_PROJECT_NAMESPACE.devtools-dev.ext.devshift.net/\\033[0m"
 
 # CLEANUP
 if [ "$RH_CHE_DEPLOY_SCRIPT_CLEANUP" = true ]; then
