@@ -79,6 +79,10 @@ if [[ -n $RUNNING_WORKSPACE ]]; then
 	MVN_COMMAND="${MVN_COMMAND} -Dche.workspaceName=${RUNNING_WORKSPACE}"
 fi
 
+if [[ -n $RHCHE_HOST_PROTOCOL ]]; then
+	MVN_COMMAND="${MVN_COMMAND} -Dche.protocol=${RHCHE_HOST_PROTOCOL}"
+fi
+
 if [[ "$TEST_SUITE" == "rolloutTest.xml" ]]; then
 	export OPENSHIFT_URL=$OPENSHIFT_URL
 	export OPENSHIFT_TOKEN=$OPENSHIFT_TOKEN
@@ -87,7 +91,6 @@ if [[ "$TEST_SUITE" == "rolloutTest.xml" ]]; then
 	  -Dche.admin.name=${RHCHE_ACC_USERNAME} \
   	  -Dche.admin.email=${RHCHE_ACC_EMAIL} \
 	  -Dche.admin.password=${RHCHE_ACC_PASSWORD} \
-	  -Dche.protocol=${RHCHE_HOST_PROTOCOL} \
 	  -Dche.port=80 \
 	  -Dche.openshift.project=${OPENSHIFT_PROJECT}"
 fi
