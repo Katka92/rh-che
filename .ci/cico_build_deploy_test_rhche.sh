@@ -69,8 +69,10 @@ fi
 set -x
 
 echo "Custom che deployment successful, running Rh-che tests against ${RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL}"
-if ./functional-tests/devscripts/run_tests.sh
-then
+./functional-tests/devscripts/run_tests.sh -u $USERNAME -p $PASSWORD -m $EMAIL  -r $HOST_URL -t "http" -v $MOUNT_PATH -i 80 -j  $RHCHE_TOKEN_URL -o $AUTH_ENDPOINT
+return_code=$?
+
+if [[ $return_code -eq 0 ]]; then
   echo "Functional tests finished without errors."
 else
   echo "Che functional tests failed. Error code:$?"

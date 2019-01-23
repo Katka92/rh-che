@@ -14,28 +14,61 @@ function printHelp {
 	
 	echo -e "${YELLOW}$(basename "$0") ${WHITE}[-u <username>] [-p <passwd>] [-m <email>] [-r <url>]" 
 	echo -e "\n${NC}Script for running functional tests against production or prod-preview environment."
-	echo -e "${GREEN}where:${WHITE}"
+	echo -e "${GREEN}Mandatory parameters:${WHITE}"
 	echo -e "-u    username for openshift account"
 	echo -e "-p    password for openshift account"
 	echo -e "-m    email for openshift account"
 	echo -e "-r    URL of Rh-che"
-	echo -e "${NC}All paramters are mandatory.\n"
+	echo -e "${GREEN}Parameters preset for production env:${NC}"
+	echo -e "-i    port (preset to 443)"
+	echo -e "-j    URL for obtaining Rh-che token (preset to https://sso.openshift.io/auth/realms/fabric8/broker)"
+	echo -e "-o    authentication endpoint (preset to https://auth.openshift.io)"
+	echo -e "-s    local path to dir for storing screenshots (preset to /root/logs/screenshots)"
+	echo -e "-t    protocol (preset to https)"
+	echo -e "${GREEN}Other parameters that can be changed:${NC}"
+	echo -e "-k    test suite to be executed (preset to simpleTestSuite.xml"
+	echo -e "-l    path to local dir for storing logs (preset to /root/payload/logs)"
+	echo -e "-v    local path from where to mount rh-che (if not set, code from Rh-che master is used)"
+	
 }
 
-while getopts "hu:p:m:o:r:" opt; do
+export LOG_DIR=/root/payload/logs
+export RHCHE_SCREENSHOTS_DIR=/root/logs/screenshots
+export PORT=443
+export RHCHE_OPENSHIFT_TOKEN_URL="https://sso.openshift.io/auth/realms/fabric8/broker"
+export TEST_SUITE="simpleTestSuite.xml"
+export CHE_OSIO_AUTH_ENDPOINT="https://auth.openshift.io"
+export HOST_URL="che.openshift.io"
+export PROTOCOL="https"
+
+while getopts "hi:j:k:l:m:o:p:r:s:t:u:v:" opt; do
   case $opt in
     h) printHelp
       exit 0
       ;;
-    u) export USERNAME=$OPTARG
+    i) export PORT=$OPTARG
       ;;
-    p) export PASSWORD=$OPTARG
+    j) export RHCHE_OPENSHIFT_TOKEN_URL=$OPTARG
+     ;;
+    k) export TEST_SUITE=$OPTARG
+     ;;
+    l) export LOG_DIR=$OPTARG
       ;;
     m) export EMAIL=$OPTARG
       ;;
-    o) export OFFLINE_TOKEN=$OPTARG
+    o) export CHE_OSIO_AUTH_ENDPOINT=$OPTARG
+      ;;
+    p) export PASSWORD=$OPTARG
       ;;
     r) export HOST_URL=$OPTARG
+      ;;
+    s) export RHCHE_SCREENSHOTS_DIR=$OPTARG
+      ;;
+    t) export PROTOCOL=$OPTARG
+      ;;
+    u) export USERNAME=$OPTARG
+      ;;
+    v) export MOUNT_PATH=$OPTARG
       ;;
     \?)
       echo "\"$opt\" is an invalid option!"
@@ -48,71 +81,32 @@ while getopts "hu:p:m:o:r:" opt; do
   esac
 done
 
-#PR CHECK
-if [[ "$PR_CHECK_BUILD" == "true" ]]; then
-	HOST_URL=$(echo ${RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL} | cut -d"/" -f 3)
-	echo "Running test against developer cluster. URL: $HOST_URL"
-	CHE_OSIO_AUTH_ENDPOINT="https://auth.prod-preview.openshift.io"
-	path="$(pwd)"
-	
-	docker run --name functional-tests-dep --privileged \
-	           -v /var/run/docker.sock:/var/run/docker.sock \
-	           -v /root/payload/logs:/root/logs \
-	           -v $path:/root/che/ \
-	           -e "RHCHE_SCREENSHOTS_DIR=/root/logs/screenshots" \
-	           -e "RHCHE_ACC_USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME" \
-	           -e "RHCHE_ACC_PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD" \
-	           -e "RHCHE_ACC_EMAIL=$RH_CHE_AUTOMATION_CHE_PREVIEW_EMAIL" \
-	           -e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
-	           -e "RHCHE_HOST_URL=$HOST_URL" \
-	           -e "RHCHE_HOST_PROTOCOL=http" \
-	           -e "RHCHE_PORT=80" \
-	           -e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
-	           -e "TEST_SUITE=prcheck.xml" \
-           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
-    RESULT=$?
-else
-	if [[ -z $USERNAME || -z $PASSWORD || -z $EMAIL || -z $HOST_URL ]]; then
-	    echo "Please check if all credentials for user are set."
-	    exit 1
-	fi
-	
-	#PRODUCTION
-	if [[ "$HOST_URL" == "che.openshift.io" ]]; then
-	echo "Running test with user $USERNAME against production environment."
-	CHE_OSIO_AUTH_ENDPOINT="https://auth.openshift.io"
-
-	docker run --name functional-tests-dep --privileged \
-	           -v /var/run/docker.sock:/var/run/docker.sock \
-	           -v /root/payload/logs:/root/logs \
-	           -e "RHCHE_SCREENSHOTS_DIR=/root/logs/screenshots" \
-	           -e "RHCHE_ACC_USERNAME=$USERNAME" \
-	           -e "RHCHE_ACC_PASSWORD=$PASSWORD" \
-	           -e "RHCHE_ACC_EMAIL=$EMAIL" \
-	           -e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
-	           -e "RHCHE_HOST_URL=$HOST_URL" \
-           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
-    RESULT=$?
-    
-	#PROD-PREVIEW
-	else
-		echo "Running test with user $USERNAME against prod-preview environment."
-		CHE_OSIO_AUTH_ENDPOINT="https://auth.prod-preview.openshift.io"
-	
-		docker run --name functional-tests-dep --privileged \
-		           -v /var/run/docker.sock:/var/run/docker.sock \
-		           -v /root/payload/logs:/root/logs \
-		           -e "RHCHE_SCREENSHOTS_DIR=/root/logs/screenshots" \
-		           -e "RHCHE_ACC_USERNAME=$USERNAME" \
-		           -e "RHCHE_ACC_PASSWORD=$PASSWORD" \
-		           -e "RHCHE_ACC_EMAIL=$EMAIL" \
-		           -e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
-		           -e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
-		           -e "RHCHE_HOST_URL=$HOST_URL" \
-	           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
-	    RESULT=$?
-	fi
+if [[ -z $USERNAME || -z $PASSWORD || -z $EMAIL || -z $HOST_URL ]]; then
+    echo "Please check if all credentials for user are set."
+    exit 1
 fi
+
+#setting common parameters for docker
+DOCKER_COMMAND="docker run --name functional-tests-dep --privileged \
+	           -v /var/run/docker.sock:/var/run/docker.sock \
+	           -v $LOG_DIR:/root/logs \
+	           -e \"RHCHE_SCREENSHOTS_DIR=$RHCHE_SCREENSHOTS_DIR\" \
+	           -e \"RHCHE_ACC_USERNAME=$USERNAME\" \
+	           -e \"RHCHE_ACC_EMAIL=$EMAIL\" \
+	           -e \"RHCHE_HOST_URL=$HOST_URL\" \
+	           -e \"CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT\" \
+	           -e \"RHCHE_HOST_PROTOCOL=$PROTOCOL\" \
+	           -e \"RHCHE_PORT=$PORT\" \
+	           -e \"RHCHE_OPENSHIFT_TOKEN_URL=$RHCHE_OPENSHIFT_TOKEN_URL\" \
+	           -e \"TEST_SUITE=$TEST_SUITE\" "
+	           
+if [[ -n $MOUNT_PATH ]]; then
+	DOCKER_COMMAND="${DOCKER_COMMAND} -v $MOUNT_PATH:/root/che/ "
+fi
+
+DOCKER_COMMAND="${DOCKER_COMMAND} quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep"
+eval "$DOCKER_COMMAND"
+RESULT=$?
 
 archiveArtifacts
 
