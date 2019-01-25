@@ -137,7 +137,8 @@ public abstract class BayesianAbstractTestClass extends RhCheAbstractTestClass {
       editor.waitTextInToolTipPopup(ERROR_MESSAGE);
     } catch (TimeoutException e) {
       if (testApiEndpointUrlProvider.get().getHost().equals(CHE_PROD_PREVIEW_URL)) {
-        throw new SkipException("Skipping test for prod-preview - known issue.");
+        throw new SkipException(
+            "Skipping test for prod-preview - known issue: https://github.com/openshiftio/openshift.io/issues/2063.");
       }
       throw e;
     }
