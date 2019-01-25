@@ -52,7 +52,7 @@ else
 	
   #change version of used che
   echo ">>> change upstream version to: $CHE_VERSION"
-  scl enable rh-maven33 rh-nodejs8 "mvn versions:update-parent  versions:commit -DallowSnapshots=true -DparentVersion=[${CHE_VERSION}] -U"
+  scl enable rh-maven33 "mvn versions:update-parent  versions:commit -DallowSnapshots=true -DparentVersion=[${CHE_VERSION}] -U"
 fi
 
 echo "Setting image tags for pushing to quay."
