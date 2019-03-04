@@ -69,7 +69,7 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	           -e "RHCHE_PORT=80" \
 	           -e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
 	           -e "TEST_SUITE=prcheck.xml" \
-           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
+           quay.io/openshiftio/che-rh-che-server
     RESULT=$?
 else
 	if [[ -z $USERNAME || -z $PASSWORD || -z $EMAIL || -z $HOST_URL ]]; then
@@ -91,7 +91,7 @@ else
 	           -e "RHCHE_ACC_EMAIL=$EMAIL" \
 	           -e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
 	           -e "RHCHE_HOST_URL=$HOST_URL" \
-           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
+           quay.io/openshiftio/che-rh-che-server
     RESULT=$?
     
 	#PROD-PREVIEW
@@ -109,7 +109,7 @@ else
 		           -e "CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT" \
 		           -e "RHCHE_OPENSHIFT_TOKEN_URL=https://sso.prod-preview.openshift.io/auth/realms/fabric8/broker" \
 		           -e "RHCHE_HOST_URL=$HOST_URL" \
-	           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
+	           quay.io/openshiftio/che-rh-che-server
 	    RESULT=$?
 	fi
 fi
