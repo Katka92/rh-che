@@ -16,6 +16,7 @@ import com.redhat.che.selenium.core.workspace.RhCheWorkspaceTemplate;
 import org.eclipse.che.selenium.core.workspace.InjectTestWorkspace;
 import org.eclipse.che.selenium.core.workspace.TestWorkspace;
 import org.eclipse.che.selenium.pageobject.Consoles;
+import org.eclipse.che.selenium.pageobject.ProjectExplorer;
 import org.eclipse.che.selenium.pageobject.intelligent.CommandsPalette;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ public class BuildAndRunProjectTest extends RhCheAbstractTestClass {
   @InjectTestWorkspace(template = RhCheWorkspaceTemplate.RH_VERTX)
   private TestWorkspace workspace;
 
+  @Inject private ProjectExplorer projectExplorer;
   @Inject private CommandsPalette commandsPalette;
   @Inject private Consoles consoles;
 
