@@ -30,7 +30,6 @@
         <che.protocol>https</che.protocol>
         <che.threads>1</che.threads>
         <che.workspace_pool_size>0</che.workspace_pool_size>
-        <cheStarterUrl>http://localhost:10000</cheStarterUrl>
         <driver.port>9515</driver.port>
         <grid.mode>false</grid.mode>
         <org.apache.maven.verson>3.5.2</org.apache.maven.verson>
@@ -39,11 +38,6 @@
     </properties>
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>javax.ws.rs</groupId>
-                <artifactId>javax.ws.rs-api</artifactId>
-                <version>2.0</version>
-            </dependency>
             <dependency>
                 <groupId>org.eclipse.che.core</groupId>
                 <artifactId>che-core-api-dto</artifactId>
@@ -83,40 +77,8 @@
             <artifactId>guice</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-assistedinject</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-api-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.che.core</groupId>
             <artifactId>che-core-api-dto</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-api-model</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-api-workspace-shared</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-commons-lang</artifactId>
         </dependency>
         <!-- TEST DEPENDENCIES -->
         <dependency>
@@ -242,7 +204,6 @@
                                 <che.testuser.password>${che.testuser.password}</che.testuser.password>
                                 <che.offline.to.access.token.exchange.endpoint>${che.offline.to.access.token.exchange.endpoint}</che.offline.to.access.token.exchange.endpoint>
                                 <excludedGroups>${excludedGroups}</excludedGroups>
-                                <cheStarterUrl>${cheStarterUrl}</cheStarterUrl>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
