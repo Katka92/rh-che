@@ -87,12 +87,14 @@ if [[ -z $USERNAME || -z $PASSWORD || -z $EMAIL || -z $HOST_URL ]]; then
 fi
 
 #setting common parameters for docker
+#change image once job for building prcheck image is fixed
 DOCKER_COMMAND="docker run --name functional-tests-dep --privileged \
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           -v $LOG_DIR:/root/logs \
 	           -e \"RHCHE_SCREENSHOTS_DIR=$RHCHE_SCREENSHOTS_DIR\" \
 	           -e \"RHCHE_ACC_USERNAME=$USERNAME\" \
 	           -e \"RHCHE_ACC_EMAIL=$EMAIL\" \
+	           -e \"RHCHE_ACC_PASSWORD=$PASSWORD\" \
 	           -e \"RHCHE_HOST_URL=$HOST_URL\" \
 	           -e \"CHE_OSIO_AUTH_ENDPOINT=$CHE_OSIO_AUTH_ENDPOINT\" \
 	           -e \"RHCHE_HOST_PROTOCOL=$PROTOCOL\" \
