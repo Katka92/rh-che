@@ -84,7 +84,7 @@ public abstract class BayesianAbstractTestClass extends RhCheAbstractTestClass {
 
   public void openTestFile() throws Exception {
     checkWorkspace(workspace);
-    projectExplorer.waitItem(PROJECT_NAME);
+    importWorkaround(workspace, 5);
   }
 
   @BeforeMethod

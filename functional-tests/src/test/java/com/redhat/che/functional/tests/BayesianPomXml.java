@@ -77,7 +77,7 @@ public class BayesianPomXml extends BayesianAbstractTestClass {
     } catch (TimeoutException e) {
       if (getTestApiEndpointUrlProvider().get().getHost().equals(CHE_PROD_URL)) {
         throw new SkipException(
-            "Skipping test for prod - known issue: https://github.com/redhat-developer/rh-che/issues/1256.");
+            "Bayesian error not present - known issue: https://github.com/redhat-developer/rh-che/issues/1256.");
       }
       throw e;
     }
