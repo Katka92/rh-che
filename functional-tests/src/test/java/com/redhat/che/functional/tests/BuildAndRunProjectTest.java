@@ -41,7 +41,9 @@ public class BuildAndRunProjectTest extends RhCheAbstractTestClass {
   @Test
   public void runProjectBuild() {
     commandsPalette.openCommandPalette();
+    LOG.info("Project imported correctly. Executing run command.");
     commandsPalette.startCommandByEnterKey("run");
     consoles.waitExpectedTextIntoConsole("INFO: Succeeded in deploying verticle", 180);
+    LOG.info("The message 'Succeeded in deploying verticle' appeared in console.");
   }
 }

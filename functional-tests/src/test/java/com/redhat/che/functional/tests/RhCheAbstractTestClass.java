@@ -77,6 +77,7 @@ public abstract class RhCheAbstractTestClass {
         throw new RuntimeException("Project was not imported to the workspace.");
       }
     }
+    LOG.info(String.format("Project successfully imported after %d attempts.", counter + 1));
   }
 
   public void closeFilesAndProject() {

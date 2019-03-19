@@ -20,8 +20,6 @@
     <test name="all">
         <classes>
             <class name="com.redhat.che.functional.tests.BuildAndRunProjectTest"/>
-            <class name="com.redhat.che.functional.tests.BayesianPackageJson"/>
-            <class name="com.redhat.che.functional.tests.BayesianPomXml"/>
         </classes>
     </test>
 </suite>
