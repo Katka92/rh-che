@@ -145,3 +145,4 @@ results to zabbix. These tests are located in [che-functional-tests repo](https:
 **Performance tests** are testing if user can correctly create/start/stop/remove workspaces. You can find more detail information in [performance tests repo](https://github.com/redhat-developer/che-functional-tests/tree/master/che-start-workspace).
 
 **Test for mounting volume** verify if it is possible to mount volume in non-che namespace in openshift.io. Tests are creating/starting/stopping/removing pods. More detail information can be found in [tests repo](https://github.com/redhat-developer/che-functional-tests/tree/master/mount-volume).
+
