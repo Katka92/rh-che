@@ -8,21 +8,14 @@
  * SPDX-License-Identifier: EPL-2.0
  **********************************************************************/
 import 'reflect-metadata';
-import { TYPES, CLASSES, TestConstants } from 'e2e';
-import { ILoginPage } from 'e2e';
-import { Dashboard } from 'e2e';
-import { NameGenerator } from 'e2e';
-import { NewWorkspace } from 'e2e';
-import { WorkspaceDetailsPlugins } from 'e2e';
-import { Ide } from 'e2e';
-import { ProjectTree } from 'e2e';
-import { Editor } from 'e2e';
-import { rhCheContainer } from '../inversify.config';
+import { TYPES, CLASSES, TestConstants, ILoginPage, Dashboard, Editor, Ide, NameGenerator , NewWorkspace, WorkspaceDetailsPlugins, ProjectTree } from 'e2e';
+import { rhCheContainer,  } from '../inversify.config';
 
 const workspaceName: string = NameGenerator.generate('wksp-test-', 5);
 const namespace: string = TestConstants.TS_SELENIUM_USERNAME;
 const sampleName: string = 'console-java-simple';
-const pluginId: string = 'redhat/java/0.38.0';
+const pluginId: string = 'redhat/java/0.45.0';
+const pluginVersion: string = '0.45.0';
 const javaPluginName: string = 'Language Support for Java(TM)';
 const fileFolderPath: string = `${sampleName}/src/main/java/org/eclipse/che/examples`;
 const tabTitle: string = 'HelloWorld.java';
@@ -44,7 +37,7 @@ suite('RhChe E2E', async () => {
     });
 
     suite('Create workspace and add plugin', async () => {
-        test('Open \'New Workspace\' page', async () => {
+        test(`Open 'New Workspace' page`, async () => {
             await newWorkspace.openPageByUI();
         });
 
@@ -52,8 +45,8 @@ suite('RhChe E2E', async () => {
             await newWorkspace.createWorkspaceAndProceedEditing(workspaceName, 'che7', sampleName);
         });
 
-        test('Add \'Java Language Support\' plugin to workspace', async () => {
-            await workspaceDetailsPlugins.addPluginAndOpenWorkspace(namespace, workspaceName, javaPluginName, pluginId);
+        test(`Add 'Java Language Support' plugin to workspace`, async () => {
+            await workspaceDetailsPlugins.addPluginAndOpenWorkspace(namespace, workspaceName, javaPluginName, pluginId, pluginVersion);
         });
 
     });
@@ -76,14 +69,14 @@ suite('RhChe E2E', async () => {
         });
 
         // unskip after resolving issue https://github.com/eclipse/che/issues/12904
-        test.skip('Check "Java Language Server" initialization by statusbar', async () => {
+        test.skip(`Check 'Java Language Server' initialization by statusbar`, async () => {
             await ide.waitStatusBarContains('Starting Java Language Server');
             await ide.waitStatusBarContains('100% Starting Java Language Server');
             await ide.waitStatusBarTextAbcence('Starting Java Language Server');
         });
 
         // unskip after resolving issue https://github.com/eclipse/che/issues/12904
-        test.skip('Check "Java Language Server" initialization by suggestion invoking', async () => {
+        test.skip(`Check 'Java Language Server' initialization by suggestion invoking`, async () => {
             await editor.waitEditorAvailable(tabTitle);
             await editor.clickOnTab(tabTitle);
             await editor.waitEditorAvailable(tabTitle);

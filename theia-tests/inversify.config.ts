@@ -1,7 +1,5 @@
-import { ILoginPage } from 'e2e';
-import { TYPES, CLASSES } from 'e2e';
+import { ILoginPage, TYPES, CLASSES, e2eContainer } from 'e2e';
 import { RhCheLoginPage } from './pageobjects/RhCheLoginPage';
-import { e2eContainer } from 'e2e';
 import { TestWorkspaceUtils } from './utils/TestWorkspaceUtils';
 
 e2eContainer.unbind(TYPES.LoginPage);

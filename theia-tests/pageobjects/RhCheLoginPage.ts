@@ -8,14 +8,10 @@
  * SPDX-License-Identifier: EPL-2.0
  **********************************************************************/
 import 'reflect-metadata';
-import { ILoginPage } from 'e2e';
+import { ILoginPage, TYPES, CLASSES, IDriver, TestConstants, DriverHelper } from 'e2e';
 import { injectable, inject } from 'inversify';
 import { ThenableWebDriver } from 'selenium-webdriver';
-import { TYPES, CLASSES } from 'e2e';
-import { IDriver } from 'e2e';
-import { TestConstants } from 'e2e';
 import { By } from 'selenium-webdriver';
-import { DriverHelper } from 'e2e';
 
 const USERNAME_INPUT_ID : string = 'username';
 const PASSWORD_INPUT_ID : string = 'password';
@@ -33,18 +29,17 @@ export class RhCheLoginPage implements ILoginPage {
         await webDriver.navigate().to(TestConstants.TS_SELENIUM_BASE_URL);
 
         const usernameFieldLocator: By = By.id(USERNAME_INPUT_ID);
-        await this.driverHelper.waitVisibility(By.id(USERNAME_INPUT_ID), 20000);
+        await this.driverHelper.waitVisibility(usernameFieldLocator, 20000);
         await this.driverHelper.enterValue(usernameFieldLocator, TestConstants.TS_SELENIUM_USERNAME, timeout );
 
         const nextButtonLocator: By = By.id(NEXT_BUTTON_ID);
         await this.driverHelper.waitAndClick(nextButtonLocator, timeout);
 
         const passwordFieldLocator: By = By.id(PASSWORD_INPUT_ID);
-        await this.driverHelper.waitVisibility(By.id(PASSWORD_INPUT_ID), 3000);
+        await this.driverHelper.waitVisibility(passwordFieldLocator, 3000);
         await this.driverHelper.enterValue(passwordFieldLocator, TestConstants.TS_SELENIUM_PASSWORD, timeout );
 
         const loginButtonLocator: By = By.id(LOGIN_BUTTON_ID);
         await this.driverHelper.waitAndClick(loginButtonLocator, timeout);
     }
 }
-

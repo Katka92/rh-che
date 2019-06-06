@@ -8,7 +8,7 @@
     "tsc": "rm -rf dist && tsc -p .",
     "lint": "tslint --fix -p .",
     "set_env": "export TS_SELENIUM_LOAD_PAGE_TIMEOUT=300000",
-    "debug": "npm run tsc && mocha --opts mocha.opts"
+    "test_without_lint": "npm run tsc && mocha --opts mocha.opts"
   },
   "repository": {
     "type": "git",

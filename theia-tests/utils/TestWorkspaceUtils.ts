@@ -9,9 +9,7 @@
  **********************************************************************/
 
 import { injectable, inject } from 'inversify';
-import { DriverHelper } from 'e2e';
-import { CLASSES } from 'e2e';
-import { TestConstants } from 'e2e';
+import { DriverHelper, CLASSES, TestConstants } from 'e2e';
 import 'reflect-metadata';
 import * as rm from 'typed-rest-client/RestClient';
 import { RhCheTestConstants } from '../RhCheTestConstants';
@@ -21,7 +19,6 @@ export enum WorkspaceStatus {
     STOPPED = 'STOPPED',
     STARTING = 'STARTING'
 }
-
 
 @injectable()
 export class TestWorkspaceUtils {
@@ -60,7 +57,7 @@ export class TestWorkspaceUtils {
         const workspaceStatusApiUrl: string = `${TestConstants.TS_SELENIUM_BASE_URL}/api/workspace/${namespace}:${workspaceName}`;
         const attempts: number = TestConstants.TS_SELENIUM_PLUGIN_PRECENCE_ATTEMPTS;
         const polling: number = TestConstants.TS_SELENIUM_PLUGIN_PRECENCE_POLLING;
-
+        
         for (let i = 0; i < attempts; i++) {
             const response: rm.IRestResponse<any> = await this.rest.get(workspaceStatusApiUrl, {additionalHeaders: {'Authorization' : 'Bearer ' + RhCheTestConstants.THEIA_TESTS_USER_TOKEN } });
 

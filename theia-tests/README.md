@@ -11,7 +11,7 @@ There are two ways how to run them - using docker file with pre-installed depend
 The tests are end-to-end tests that should represent Happy path through a product. Current flow is following:
 
 - Login
-- Create Che 7 workspace with console-java-simple stack
+- Create Che 7 workspace based on Che 7 stack with console-java-simple project
 - Add Java Language Support plugin
 - Start and open workspace
 - Open file in editor
