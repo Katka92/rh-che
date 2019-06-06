@@ -5,7 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "test": "npm run set_env && npm run lint && npm run tsc && mocha --opts mocha.opts",
-    "tsc": "tsc -p .",
+    "tsc": "rm -rf dist && tsc -p .",
     "lint": "tslint --fix -p .",
     "set_env": "export TS_SELENIUM_LOAD_PAGE_TIMEOUT=300000",
     "debug": "npm run tsc && mocha --opts mocha.opts"
@@ -15,7 +15,7 @@
     "url": "git+https://github.com/redhat-developer/rh-che.git"
   },
   "author": "Katerina Foniok (kkanova@redhat.com)",
-  "license": "ISC",
+  "license": "EPL-2.0",
   "bugs": {
     "url": "https://github.com/redhat-developer/rh-che/issues"
   },
@@ -36,7 +36,6 @@
   },
   "dependencies": {
     "inversify": "^5.0.1",
-    "reflect-metadata": "^0.1.13",
-    "e2e": "file:../../che/e2e"
+    "reflect-metadata": "^0.1.13"
   }
 }
