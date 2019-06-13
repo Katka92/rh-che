@@ -34,7 +34,7 @@ export class TestWorkspaceUtils {
         const polling: number = TestConstants.TS_SELENIUM_WORKSPACE_STATUS_POLLING;
 
         for (let i = 0; i < attempts; i++) {
-            const response: rm.IRestResponse<any> = await this.rest.get(workspaceStatusApiUrl, {additionalHeaders: {'Authorization' : 'Bearer ' + RhCheTestConstants.THEIA_TESTS_USER_TOKEN } });
+            const response: rm.IRestResponse<any> = await this.rest.get(workspaceStatusApiUrl, {additionalHeaders: {'Authorization' : 'Bearer ' + RhCheTestConstants.E2E_SAAS_TESTS_USER_TOKEN } });
 
             if (response.statusCode !== 200) {
                 await this.driverHelper.wait(polling);
@@ -57,9 +57,9 @@ export class TestWorkspaceUtils {
         const workspaceStatusApiUrl: string = `${TestConstants.TS_SELENIUM_BASE_URL}/api/workspace/${namespace}:${workspaceName}`;
         const attempts: number = TestConstants.TS_SELENIUM_PLUGIN_PRECENCE_ATTEMPTS;
         const polling: number = TestConstants.TS_SELENIUM_PLUGIN_PRECENCE_POLLING;
-        
+
         for (let i = 0; i < attempts; i++) {
-            const response: rm.IRestResponse<any> = await this.rest.get(workspaceStatusApiUrl, {additionalHeaders: {'Authorization' : 'Bearer ' + RhCheTestConstants.THEIA_TESTS_USER_TOKEN } });
+            const response: rm.IRestResponse<any> = await this.rest.get(workspaceStatusApiUrl, {additionalHeaders: {'Authorization' : 'Bearer ' + RhCheTestConstants.E2E_SAAS_TESTS_USER_TOKEN } });
 
             if (response.statusCode !== 200) {
                 await this.driverHelper.wait(polling);
