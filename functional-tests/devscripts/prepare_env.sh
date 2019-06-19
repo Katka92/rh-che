@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-
+echo "***** Installing dependencies for functional tests $(date) ******"
+start=$(date +%s)
 set -e
 echo "Installing docker..."
 yum install -y docker | cat # Suppress multiple-line output for package installation
+yum install --assumeyes bc
+yum install epel-release --assumeyes
+yum update --assumeyes
+yum install --assumeyes -q jq
+
 systemctl start docker
 docker pull quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep | cat # Suppress multiple-line output for docker pull
 
@@ -11,3 +17,6 @@ eval "$(./env-toolkit load -f jenkins-env.json -r  USERNAME PASSWORD EMAIL OFFLI
 
 mkdir logs
 
+end=$(date +%s)
+instal_deps_duration=$(echo "$end - $start" | bc)
+echo "Installing dependencies lasted $instal_deps_duration seconds."
