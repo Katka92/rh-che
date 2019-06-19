@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 echo "***** Installing dependencies for functional tests $(date) ******"
+
 start=$(date +%s)
 set -e
-echo "Installing docker..."
-yum install -y docker | cat # Suppress multiple-line output for package installation
-yum install --assumeyes bc
-yum install epel-release --assumeyes
-yum update --assumeyes
-yum install --assumeyes -q jq
+echo "Installing dependencies..."
 
-systemctl start docker
+source .ci/functional_tests_utils.sh
+installJQ
+installBC
+installStartDocker
+
 docker pull quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep | cat # Suppress multiple-line output for docker pull
 
 export HOST_URL=$HOST_URL
