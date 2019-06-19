@@ -159,13 +159,13 @@ else
 fi
 
 end=$(date +%s)
-test_duration=$(echo "$end - $start" | bc)
+test_duration=$(($end - $start))
 echo "Running tests lasted $test_duration seconds."
 
 start=$(date +%s)
 archiveArtifacts
 end=$(date +%s)
-archive_duration=$(echo "$end - $start" | bc)
+archive_duration=$(($end - $start))
 echo "Archiving artifacts lasted $archive_duration seconds."
 
 if [[ $RESULT == 0 ]]; then
