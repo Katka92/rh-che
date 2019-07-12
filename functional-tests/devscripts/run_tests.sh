@@ -116,10 +116,10 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	       quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
 	RESULT=$?
 	    
-	mkdir screens
+	mkdir report
 	
 	docker run \
-	   -v $path/screens:/root/rh-che/local_tests/report:Z \
+	   -v $path/report:/root/rh-che/local_tests/report:Z \
 	   -v $path/e2e-saas/:/root/rh-che/local_tests:Z \
 	   -e USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME \
 	   -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
@@ -133,7 +133,7 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	fi
 		
 	mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
-	cp -r ./screens ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+	cp -r ./report ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
 	
 	
 else
@@ -187,10 +187,11 @@ else
 	           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
 	    RESULT=$?
 	    
-	    mkdir screens
+	    path="$(pwd)"
+	    mkdir report
 	
 	    docker run 	\
-	       -v $pwd/screens:/root/rh-che/e2e-saas/report:Z \
+	       -v $path/report:/root/rh-che/e2e-saas/report:Z \
 	       -e USERNAME=$USERNAME \
 	       -e PASSWORD=$PASSWORD \
 	       -e URL=https://$HOST_URL \
@@ -203,7 +204,7 @@ else
 	    fi
 		
 	    mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
-	    cp -r ./screens/ ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+	    cp -r ./report/ ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
 	fi
 fi
 end=$(date +%s)
