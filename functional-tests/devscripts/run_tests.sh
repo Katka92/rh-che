@@ -96,6 +96,21 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	CHE_OSIO_AUTH_ENDPOINT="https://auth.prod-preview.openshift.io"
 	path="$(pwd)"
 	
+	mkdir report
+	
+	docker run \
+	   -v $path/report:/root/rh-che/local_tests/report:Z \
+	   -v $path/e2e-saas/:/root/rh-che/local_tests:Z \
+	   -e USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME \
+	   -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
+	   -e URL=http://$HOST_URL \
+	   --shm-size=256m \
+	quay.io/openshiftio/rhchestage-rh-che-e2e-tests
+	E2E_RESULT=$?
+	
+	mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+	cp -r ./report ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+	
 	docker run --name functional-tests-dep --privileged \
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           -v /root/payload/logs:/root/logs \
@@ -114,27 +129,11 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	           -e "OPENSHIFT_USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME"  \
 	           -e "OPENSHIFT_PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD" \
 	       quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
-	RESULT=$?
-	    
-	mkdir report
-	
-	docker run \
-	   -v $path/report:/root/rh-che/local_tests/report:Z \
-	   -v $path/e2e-saas/:/root/rh-che/local_tests:Z \
-	   -e USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME \
-	   -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
-	   -e URL=http://$HOST_URL \
-	   --shm-size=256m \
-	quay.io/openshiftio/rhchestage-rh-che-e2e-tests
-	E2E_RESULT=$?
+	RESULT=$?	
 	
 	if [[ $E2E_RESULT -ne 0 ]]; then
 	    RESULT=1
 	fi
-		
-	mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
-	cp -r ./report ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
-	
 	
 else
 	if [[ -z $USERNAME || -z $PASSWORD || -z $EMAIL || -z $HOST_URL ]]; then
@@ -169,6 +168,21 @@ else
 		echo "Running test with user $USERNAME against prod-preview environment."
 		CHE_OSIO_AUTH_ENDPOINT="https://auth.prod-preview.openshift.io"
 	
+		path="$(pwd)"
+		mkdir report
+		
+		docker run \
+			-v $path/report:/root/rh-che/e2e-saas/report:Z \
+			-e USERNAME=$USERNAME \
+			-e PASSWORD=$PASSWORD \
+			-e URL=https://$HOST_URL \
+			--shm-size=256m \
+		quay.io/openshiftio/rhchestage-rh-che-e2e-tests
+		E2E_RESULT=$?
+	    
+		mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+		cp -r ./report/ ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+	    
 		docker run --name functional-tests-dep --privileged \
 		           -v /var/run/docker.sock:/var/run/docker.sock \
 		           -v /root/payload/logs:/root/logs \
@@ -186,25 +200,10 @@ else
 		           --shm-size=256m \
 	           quay.io/openshiftio/rhchestage-rh-che-functional-tests-dep
 	    RESULT=$?
-	    
-	    path="$(pwd)"
-	    mkdir report
 	
-	    docker run 	\
-	       -v $path/report:/root/rh-che/e2e-saas/report:Z \
-	       -e USERNAME=$USERNAME \
-	       -e PASSWORD=$PASSWORD \
-	       -e URL=https://$HOST_URL \
-	       --shm-size=256m \
-	    quay.io/openshiftio/rhchestage-rh-che-e2e-tests
-	    E2E_RESULT=$?
-	
-	    if [[ $E2E_RESULT -ne 0 ]]; then
-	        RESULT=1
-	    fi
-		
-	    mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
-	    cp -r ./report/ ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
+		if [[ $E2E_RESULT -ne 0 ]]; then
+			RESULT=1
+		fi
 	fi
 fi
 end=$(date +%s)
