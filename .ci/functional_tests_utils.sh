@@ -7,87 +7,87 @@
 # http://www.eclipse.org/legal/epl-v10.html
 
 function installOC() {
-	OC_VERSION=3.10.90
-	curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
+  OC_VERSION=3.10.90
+  curl -s "https://mirror.openshift.com/pub/openshift-v3/clients/${OC_VERSION}/linux/oc.tar.gz" | tar xvz -C /usr/local/bin
 }
 
 function installJQ() {
-	installEpelRelease
-	yum install --assumeyes -q jq
+  installEpelRelease
+  yum install --assumeyes -q jq
 }
 
 function installEpelRelease() {
-	yum install epel-release --assumeyes
-	yum update --assumeyes
+  yum install epel-release --assumeyes
+  yum update --assumeyes
 }
 
 function installYQ() {
-	installEpelRelease
-	yum install python-pip --assumeyes
-	pip install yq
+  installEpelRelease
+  yum install python-pip --assumeyes
+  pip install yq
 }
 
 function installStartDocker() {
-	yum install --assumeyes docker
-	systemctl start docker
+  yum install --assumeyes docker
+  systemctl start docker
 }
 
 function installMvn() {
-	yum install --assumeyes rh-maven33
+  yum install --assumeyes rh-maven33
 }
 
 function installNodejs() {
-	yum install --assumeyes rh-nodejs8
+  yum install --assumeyes rh-nodejs8
 }
 
 function installDependencies() {
-	installEpelRelease
-	installYQ
-	installStartDocker
-	installJQ
-	installOC
-	
-	# Getting dependencies ready
-	yum install --assumeyes \
-	            git \
-	            patch \
-	            pcp \
-	            bzip2 \
-	            golang \
-	            make \
-	            java-1.8.0-openjdk \
-	            java-1.8.0-openjdk-devel \
-	            centos-release-scl
-	installNodejs
-	installMvn
+  installEpelRelease
+  installYQ
+  installStartDocker
+  installJQ
+  installOC
+  
+  # Getting dependencies ready
+  yum install --assumeyes \
+              git \
+              patch \
+              pcp \
+              bzip2 \
+              golang \
+              make \
+              java-1.8.0-openjdk \
+              java-1.8.0-openjdk-devel \
+              centos-release-scl
+  installNodejs
+  installMvn
 }
 
 function checkAllCreds() {
-	CREDS_NOT_SET="false"
+  CREDS_NOT_SET="false"
 
-	if [[ -z "${QUAY_USERNAME}" || -z "${QUAY_PASSWORD}" ]]; then
-	  echo "Docker registry credentials not set"
-	  CREDS_NOT_SET="true"
-	fi
-	
-	if [[ -z "${RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN}" ]]; then
-	  echo "RDU2C credentials not set"
-	  CREDS_NOT_SET="true"
-	fi
+  if [[ -z "${QUAY_USERNAME}" || -z "${QUAY_PASSWORD}" ]]; then
+    echo "Docker registry credentials not set"
+    CREDS_NOT_SET="true"
+  fi
+  
+  if [[ -z "${RH_CHE_AUTOMATION_DEV_CLUSTER_SA_TOKEN}" ]]; then
+    echo "RDU2C credentials not set"
+    CREDS_NOT_SET="true"
+  fi
 
-	if [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_EMAIL}" ]] ||
-	   [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME}" ]] ||
-	   [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD}" ]]; then
-	  echo "Prod-preview credentials not set."
-	  CREDS_NOT_SET="true"
-	fi
-	
-	if [[ "${CREDS_NOT_SET}" = "true" ]]; then
-	  echo "Failed to parse jenkins secure store credentials"
-	  exit 2
-	else
-	  echo "Credentials set successfully."
-	fi
+  if [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_EMAIL}" ]] ||
+     [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME}" ]] ||
+     [[ -z "${RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD}" ]]; then
+    echo "Prod-preview credentials not set."
+    CREDS_NOT_SET="true"
+  fi
+  
+  if [[ "${CREDS_NOT_SET}" = "true" ]]; then
+    echo "Failed to parse jenkins secure store credentials"
+    exit 2
+  else
+    echo "Credentials set successfully."
+  fi
 }
 
 function archiveArtifacts() {
@@ -104,78 +104,78 @@ function archiveArtifacts() {
 }
 
 function getVersionFromPom() {
-	parse_pom () { local IFS=\> ; read -d \< E C ;}
-	while parse_pom; do
-		if [[ $E = "version" ]]; then
-			echo $C
-			break
-		fi
-	done < ../../pom.xml
+  parse_pom () { local IFS=\> ; read -d \< E C ;}
+  while parse_pom; do
+    if [[ $E = "version" ]]; then
+      echo $C
+      break
+    fi
+  done < ../../pom.xml
 }
 
 function getActiveToken() {
-	rm -rf cookie-file loginfile.html
-	if [[ "$USERNAME" == *"preview"* ]]; then
-		response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.prod-preview.openshift.io/api/users?filter[username]=$USERNAME")
-		data=$(echo "$response" | jq .data)
-		if [ "$data" == "[]" ]; then
-	    exit 1
+  rm -rf cookie-file loginfile.html
+  if [[ "$USERNAME" == *"preview"* ]]; then
+    response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.prod-preview.openshift.io/api/users?filter[username]=$USERNAME")
+    data=$(echo "$response" | jq .data)
+    if [ "$data" == "[]" ]; then
+      exit 1
     fi        
     preview="prod-preview."
-	else
-		response=$(curl -s -g --header 'Accept: application/json' -X GET "https://api.openshift.io/api/users?filter[username]=$USERNAME")
-		data=$(echo "$response" | jq .data)
-		if [ "$data" == "[]" ]; then
-			exit 1
-		fi        
-		preview=""
-	fi
+  else
+    response=$(curl -s -g --header 'Accept: application/json' -X GET "https://api.openshift.io/api/users?filter[username]=$USERNAME")
+    data=$(echo "$response" | jq .data)
+    if [ "$data" == "[]" ]; then
+      exit 1
+    fi        
+    preview=""
+  fi
 
-	#get html of developers login page
-	curl -sX GET -L -c cookie-file -b cookie-file "https://auth.${preview}openshift.io/api/login?redirect=https://che.openshift.io" > loginfile.html
+  #get html of developers login page
+  curl -sX GET -L -c cookie-file -b cookie-file "https://auth.${preview}openshift.io/api/login?redirect=https://che.openshift.io" > loginfile.html
 
-	#get url for login from form
-	url=$(grep "form id" loginfile.html | grep -o 'http.*.tab_id=.[^\"]*')
-	dataUrl="username=$USERNAME&password=$PASSWORD&login=Log+in"
-	url=${url//\&amp;/\&}
+  #get url for login from form
+  url=$(grep "form id" loginfile.html | grep -o 'http.*.tab_id=.[^\"]*')
+  dataUrl="username=$USERNAME&password=$PASSWORD&login=Log+in"
+  url=${url//\&amp;/\&}
 
-	#send login and follow redirects  
-	set +e
-	url=$(curl -w '%{redirect_url}' -s -X POST -c cookie-file -b cookie-file -d "$dataUrl" "$url")
-	found=$(echo "$url" | grep "token_json")
+  #send login and follow redirects  
+  set +e
+  url=$(curl -w '%{redirect_url}' -s -X POST -c cookie-file -b cookie-file -d "$dataUrl" "$url")
+  found=$(echo "$url" | grep "token_json")
 
-	while true 
-	do
-		url=$(curl -c cookie-file -b cookie-file -s -o /dev/null -w '%{redirect_url}' "$url")
-		if [[ ${#url} == 0 ]]; then
-			#all redirects were done but token was not found
-			break
-		fi
-		found=$(echo "$url" | grep "token_json")
-		if [[ ${#found} -gt 0 ]]; then
-			#some redirects were done and token was found as a part of url
-			break
-		fi
-	done
-	set -e
+  while true 
+  do
+    url=$(curl -c cookie-file -b cookie-file -s -o /dev/null -w '%{redirect_url}' "$url")
+    if [[ ${#url} == 0 ]]; then
+      #all redirects were done but token was not found
+      break
+    fi
+    found=$(echo "$url" | grep "token_json")
+    if [[ ${#found} -gt 0 ]]; then
+      #some redirects were done and token was found as a part of url
+      break
+    fi
+  done
+  set -e
 
-	#substract active token
-	token=$(echo "$url" | grep -o "ey.[^%]*" | head -1)
-	if [[ ${#token} -gt 0 ]]; then
-		echo ${token}
-	else
-		exit 1
-	fi
+  #substract active token
+  token=$(echo "$url" | grep -o "ey.[^%]*" | head -1)
+  if [[ ${#token} -gt 0 ]]; then
+    echo ${token}
+  else
+    exit 1
+  fi
 }
 
 function getVersionFromProdPreview() {
-	token=$(getActiveToken)
-	version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.prod-preview.openshift.io/api/ | jq '.buildInfo')
-	echo ${version//\"/}
+  token=$(getActiveToken)
+  version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.prod-preview.openshift.io/api/ | jq '.buildInfo')
+  echo ${version//\"/}
 }
 
 function getVersionFromProd() {
-	token=$(getActiveToken)
-	version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.openshift.io/api/ | jq '.buildInfo')
-	echo ${version//\"/}
+  token=$(getActiveToken)
+  version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.openshift.io/api/ | jq '.buildInfo')
+  echo ${version//\"/}
 }
