@@ -97,6 +97,35 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	path="$(pwd)"
 	
 	mkdir report
+
+	#check version in rh-che pom.xml to use correct version of tests.
+	version=$(getVersionFromPom)
+	if [[ -z "${version}" ]]; then
+		echo "[ERROR]: Could not found version in pom.xml."
+		exit 1
+	fi
+	rhche_image="quay.io/openshiftio/rhchestage-rh-che-e2e-tests:${version}"
+
+	docker pull $rhche_image
+	RESULT=$?
+
+	#reuse image if exists or build new image for test
+	if [[ $RESULT != 0 ]]; then
+		echo "Could not found RH-Che tests image with tag ${version}."
+		curl --silent -f -lSL https://index.docker.io/v1/repositories/eclipse/che-e2e/tags/${version} > /dev/null
+		RESULT=$?
+		if [[ $RESULT != 0 ]]; then
+			echo "Could not found Che test image with tag ${versin}. Building own RH-Che image based on Che image with nightly tag."
+			docker build --build-arg TAG=nightly -t e2e_tests ../../dockerfiles/e2e-saas
+			rhche_image=e2e_tests
+		else
+			echo "Upstream image with tag ${version} found. Building own RH-Che image based on Che image with ${version} tag."
+			docker build --build-arg TAG=${version} -t e2e_tests ../../dockerfiles/e2e-saas
+			rhche_image=e2e_tests
+		fi
+	else
+		echo "RH-Che test image with tag ${version} found on docker. Reusing image."
+	fi
 	
 	docker run \
 	   -v $path/report:/root/rh-che/local_tests/report:Z \
@@ -105,7 +134,7 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
 	   -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
 	   -e URL=http://$HOST_URL \
 	   --shm-size=256m \
-	quay.io/openshiftio/rhchestage-rh-che-e2e-tests
+	$rhche_image
 	RESULT=$?
 	
 	mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report
@@ -147,13 +176,15 @@ else
 		path="$(pwd)"
 		mkdir report
 		
+		TAG=$(getVersionFromProdPreview)
+
 		docker run \
 			-v $path/report:/root/rh-che/e2e-saas/report:Z \
 			-e USERNAME=$USERNAME \
 			-e PASSWORD=$PASSWORD \
 			-e URL=https://$HOST_URL \
 			--shm-size=256m \
-		quay.io/openshiftio/rhchestage-rh-che-e2e-tests
+		quay.io/openshiftio/rhchestage-rh-che-e2e-tests:$TAG
 		RESULT=$?
 	    
 		mkdir -p ./rhche/${JOB_NAME}/${BUILD_NUMBER}/e2e_report

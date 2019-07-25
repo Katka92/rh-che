@@ -102,3 +102,80 @@ function archiveArtifacts() {
   cp ./events_report.txt ./rhche/${JOB_NAME}/${BUILD_NUMBER}/
   rsync --password-file=./artifacts.key -PHva --relative ./rhche/${JOB_NAME}/${BUILD_NUMBER} devtools@artifacts.ci.centos.org::devtools/
 }
+
+function getVersionFromPom() {
+	parse_pom () { local IFS=\> ; read -d \< E C ;}
+	while parse_pom; do
+		if [[ $E = "version" ]]; then
+			echo $C
+			break
+		fi
+	done < ../../pom.xml
+}
+
+function getActiveToken() {
+	rm -rf cookie-file loginfile.html
+	if [[ "$USERNAME" == *"preview"* ]]; then
+		response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.prod-preview.openshift.io/api/users?filter[username]=$USERNAME")
+		data=$(echo "$response" | jq .data)
+		if [ "$data" == "[]" ]; then
+	    exit 1
+    fi        
+    preview="prod-preview."
+	else
+		response=$(curl -s -g --header 'Accept: application/json' -X GET "https://api.openshift.io/api/users?filter[username]=$USERNAME")
+		data=$(echo "$response" | jq .data)
+		if [ "$data" == "[]" ]; then
+			exit 1
+		fi        
+		preview=""
+	fi
+
+	#get html of developers login page
+	curl -sX GET -L -c cookie-file -b cookie-file "https://auth.${preview}openshift.io/api/login?redirect=https://che.openshift.io" > loginfile.html
+
+	#get url for login from form
+	url=$(grep "form id" loginfile.html | grep -o 'http.*.tab_id=.[^\"]*')
+	dataUrl="username=$USERNAME&password=$PASSWORD&login=Log+in"
+	url=${url//\&amp;/\&}
+
+	#send login and follow redirects  
+	set +e
+	url=$(curl -w '%{redirect_url}' -s -X POST -c cookie-file -b cookie-file -d "$dataUrl" "$url")
+	found=$(echo "$url" | grep "token_json")
+
+	while true 
+	do
+		url=$(curl -c cookie-file -b cookie-file -s -o /dev/null -w '%{redirect_url}' "$url")
+		if [[ ${#url} == 0 ]]; then
+			#all redirects were done but token was not found
+			break
+		fi
+		found=$(echo "$url" | grep "token_json")
+		if [[ ${#found} -gt 0 ]]; then
+			#some redirects were done and token was found as a part of url
+			break
+		fi
+	done
+	set -e
+
+	#substract active token
+	token=$(echo "$url" | grep -o "ey.[^%]*" | head -1)
+	if [[ ${#token} -gt 0 ]]; then
+		echo ${token}
+	else
+		exit 1
+	fi
+}
+
+function getVersionFromProdPreview() {
+	token=$(getActiveToken)
+	version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.prod-preview.openshift.io/api/ | jq '.buildInfo')
+	echo ${version//\"/}
+}
+
+function getVersionFromProd() {
+	token=$(getActiveToken)
+	version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.openshift.io/api/ | jq '.buildInfo')
+	echo ${version//\"/}
+}

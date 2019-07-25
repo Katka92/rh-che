@@ -36,10 +36,9 @@ length=${#USERNAME}
 echo "Trying to find token for $(echo $USERNAME | cut -c1-3) $(echo $USERNAME | cut -c4-$length)"  
     
 #verify environment - if production or prod-preview
-#variable preview is used differ between prod and prod-preview urls
+#variable preview is used to differ between prod and prod-preview urls
 if [[ "$USERNAME" == *"preview"* ]]; then
 	response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.prod-preview.openshift.io/api/users?filter[username]=$USERNAME")
-	echo $response
 	data=$(echo "$response" | jq .data)
 	if [ "$data" == "[]" ]; then
 		echo -e "${RED}User $USERNAME is not provisoned on prod-preview cluster. Please check settings. ${NC}"
