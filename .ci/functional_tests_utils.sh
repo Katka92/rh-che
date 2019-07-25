@@ -110,7 +110,7 @@ function getVersionFromPom() {
       echo $C
       break
     fi
-  done < ../../pom.xml
+  done < pom.xml
 }
 
 function getActiveToken() {

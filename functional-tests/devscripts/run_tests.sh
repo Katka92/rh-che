@@ -116,11 +116,11 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
     RESULT=$?
     if [[ $RESULT != 0 ]]; then
       echo "Could not found Che test image with tag ${versin}. Building own RH-Che image based on Che image with nightly tag."
-      docker build --build-arg TAG=nightly -t e2e_tests ../../dockerfiles/e2e-saas
+      docker build --build-arg TAG=nightly -t e2e_tests dockerfiles/e2e-saas
       rhche_image=e2e_tests
     else
       echo "Upstream image with tag ${version} found. Building own RH-Che image based on Che image with ${version} tag."
-      docker build --build-arg TAG=${version} -t e2e_tests ../../dockerfiles/e2e-saas
+      docker build --build-arg TAG=${version} -t e2e_tests dockerfiles/e2e-saas
       rhche_image=e2e_tests
     fi
   else
