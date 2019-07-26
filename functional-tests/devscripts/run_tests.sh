@@ -106,11 +106,10 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
   fi
   rhche_image="quay.io/openshiftio/rhchestage-rh-che-e2e-tests:${version}"
 
-  docker pull $rhche_image
-  RESULT=$?
-
   #reuse image if exists or build new image for test
-  if [[ $RESULT != 0 ]]; then
+  if docker pull $rhche_image; then
+    echo "RH-Che test image with tag ${version} found on docker. Reusing image."
+	else
     echo "Could not found RH-Che tests image with tag ${version}."
     curl --silent -f -lSL https://index.docker.io/v1/repositories/eclipse/che-e2e/tags/${version} > /dev/null
     RESULT=$?
@@ -123,8 +122,6 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
       docker build --build-arg TAG=${version} -t e2e_tests dockerfiles/e2e-saas
       rhche_image=e2e_tests
     fi
-  else
-    echo "RH-Che test image with tag ${version} found on docker. Reusing image."
   fi
   
   docker run \

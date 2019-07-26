@@ -61,7 +61,7 @@ TAG=$(getVersionFromPom)
 DOCKER_IMAGE_URL="${REGISTRY}/openshiftio/${NAMESPACE}-${DOCKER_IMAGE}"
 
 echo "Building docker image for functional tests (used e.g. in periodic tests)."
-docker build -t ${DOCKER_IMAGE_URL}:${TAG} --build-tag TAG=$TAG ${DOCKER_PATH}${DOCKERFILE}
+docker build -t ${DOCKER_IMAGE_URL}:${TAG} --build-arg TAG=$TAG ${DOCKER_PATH}${DOCKERFILE}
 if [ $? -ne 0 ]; then
   echo 'Docker Build Failed'
   exit 2

@@ -114,20 +114,16 @@ function getVersionFromPom() {
 function getActiveToken() {
   rm -rf cookie-file loginfile.html
   if [[ "$USERNAME" == *"preview"* ]]; then
-    response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.prod-preview.openshift.io/api/users?filter[username]=$USERNAME")
-    data=$(echo "$response" | jq .data)
-    if [ "$data" == "[]" ]; then
-      exit 1
-    fi        
     preview="prod-preview."
   else
-    response=$(curl -s -g --header 'Accept: application/json' -X GET "https://api.openshift.io/api/users?filter[username]=$USERNAME")
-    data=$(echo "$response" | jq .data)
-    if [ "$data" == "[]" ]; then
-      exit 1
-    fi        
     preview=""
   fi
+
+  response=$(curl -s -g -X GET --header 'Accept: application/json' "https://api.${preview}openshift.io/api/users?filter[username]=$USERNAME")
+  data=$(echo "$response" | jq .data)
+  if [ "$data" == "[]" ]; then
+    exit 1
+  fi        
 
   #get html of developers login page
   curl -sX GET -L -c cookie-file -b cookie-file "https://auth.${preview}openshift.io/api/login?redirect=https://che.openshift.io" > loginfile.html
