@@ -107,13 +107,8 @@ function archiveArtifacts() {
 }
 
 function getVersionFromPom() {
-  parse_pom () { local IFS=\> ; read -d \< E C ;}
-  while parse_pom; do
-    if [[ $E = "version" ]]; then
-      echo $C
-      break
-    fi
-  done < pom.xml
+  version=$(scl enable rh-maven33 "mvn org.apache.maven.plugins:maven-help-plugin:evaluate -q -Dexpression=project.parent.version -DforceStdout")
+  echo $version
 }
 
 function getActiveToken() {
