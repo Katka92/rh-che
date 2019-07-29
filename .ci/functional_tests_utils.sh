@@ -153,7 +153,7 @@ function getActiveToken() {
   done
   set -e
 
-  #substract active token
+  #extract active token
   token=$(echo "$url" | grep -o "ey.[^%]*" | head -1)
   if [[ ${#token} -gt 0 ]]; then
     echo ${token}
