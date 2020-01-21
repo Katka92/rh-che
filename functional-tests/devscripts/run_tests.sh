@@ -111,18 +111,22 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
     echo "RH-Che test image with tag ${version} found on docker. Reusing image."
 	else
     echo "Could not found RH-Che tests image with tag ${version}."
-    curl --silent -f -lSL https://index.docker.io/v1/repositories/eclipse/che-e2e/tags/${version} > /dev/null
-    RESULT=$?
-    if [[ $RESULT != 0 ]]; then
-      echo "Could not found Che test image with tag ${version}. Building own RH-Che image based on Che image with nightly tag."
-      docker build --build-arg TAG=nightly -t e2e_tests dockerfiles/e2e-saas
-      rhche_image=e2e_tests
-    else
+    echo "curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images returns:"
+    curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images 
+    echo "$(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status) returns:"
+    $(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status)
+    if [ -n $(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status) ]; then
       echo "Upstream image with tag ${version} found. Building own RH-Che image based on Che image with ${version} tag."
       docker build --build-arg TAG=${version} -t e2e_tests dockerfiles/e2e-saas
       rhche_image=e2e_tests
+    else
+      echo "Could not found Che test image with tag ${version}. Building own RH-Che image based on Che image with nightly tag."
+      docker build --build-arg TAG=nightly -t e2e_tests dockerfiles/e2e-saas
+      rhche_image=e2e_tests
     fi
   fi
+
+  exit 1
   
   #increase timeout for load page to workaround https://github.com/redhat-developer/rh-che/issues/1604
   docker run \

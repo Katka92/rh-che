@@ -43,7 +43,8 @@ CHE_VERSION=$(getVersionFromPom)
 export CHE_VERSION
 
 echo "Running ${JOB_NAME} PR: #${RH_PULL_REQUEST_ID}, build number #${BUILD_NUMBER} for che-version:${CHE_VERSION}"
-.ci/cico_build_deploy_test_rhche.sh
+#.ci/cico_build_deploy_test_rhche.sh
+./functional-tests/devscripts/run_tests.sh
 
 end_time=$(date +%s)
 whole_check_duration=$(($end_time - $total_start_time))
