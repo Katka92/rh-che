@@ -121,11 +121,7 @@ function archiveArtifacts() {
 
 function getVersionFromPom() {
   version=$(scl enable rh-maven33 "mvn -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn org.apache.maven.plugins:maven-help-plugin:evaluate -q -Dexpression=project.parent.version -DforceStdout")
-  if [[ "$version" == "7.7.1b" ]]; then
-    echo "7.7.1"
-  else 
-    echo $version
-  fi
+  echo $version
 }
 
 function getMavenVersion() {
@@ -188,22 +184,12 @@ function getVersionFromProdPreview() {
   token=$(getActiveToken)
   version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.prod-preview.openshift.io/api/ | jq '.buildInfo')
   version=${version//\"/}
-  if [[ "$version" == "7.7.1b" ]]; then
-    echo "7.7.1"
-  else 
-    echo $version
-  fi
-
+  echo $version
 }
 
 function getVersionFromProd() {
   token=$(getActiveToken)
   version=$(curl -s -X OPTIONS --header "Content-Type: application/json" --header "Authorization: Bearer ${token}" https://che.openshift.io/api/ | jq '.buildInfo')
   version=${version//\"/}
-  if [[ "$version" == "7.7.1b" ]]; then
-    echo "7.7.1"
-  else 
-    echo $version
-  fi
-
+  echo $version
 }

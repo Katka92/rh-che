@@ -111,10 +111,6 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
     echo "RH-Che test image with tag ${version} found on docker. Reusing image."
 	else
     echo "Could not found RH-Che tests image with tag ${version}."
-    echo "curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images returns:"
-    curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images 
-    echo "$(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status) returns:"
-    $(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status)
     if [ -n $(curl -X GET https://quay.io/api/v1/repository/eclipse/che-e2e/tag/7.7.1/images | jq .status) ]; then
       echo "Upstream image with tag ${version} found. Building own RH-Che image based on Che image with ${version} tag."
       docker build --build-arg TAG=${version} -t e2e_tests dockerfiles/e2e-saas
@@ -125,8 +121,6 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
       rhche_image=e2e_tests
     fi
   fi
-
-  exit 1
   
   #increase timeout for load page to workaround https://github.com/redhat-developer/rh-che/issues/1604
   docker run \
