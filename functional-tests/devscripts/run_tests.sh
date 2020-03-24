@@ -127,6 +127,7 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
      -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
      -e URL=http://$HOST_URL \
      -e TEST_SUITE=pr-check \
+     -e DEBUG_LEVEL="TRACE" \
      -e TS_SELENIUM_LOAD_PAGE_TIMEOUT=180000 \
      --shm-size=256m \
   $rhche_image
@@ -158,6 +159,7 @@ else
         -e PASSWORD=$PASSWORD \
         -e URL=https://$HOST_URL \
         -e TEST_SUITE=test-all \
+        -e DEBUG_LEVEL="TRACE" \
         -e TS_SELENIUM_LOAD_PAGE_TIMEOUT=180000 \
         --shm-size=256m \
       quay.io/openshiftio/rhchestage-rh-che-e2e-tests:$TAG
@@ -169,6 +171,7 @@ else
         -e PASSWORD=$PASSWORD \
         -e URL=https://$HOST_URL \
         -e TEST_SUITE=test-all \
+        -e DEBUG_LEVEL="TRACE" \
         -e TS_SELENIUM_LOAD_PAGE_TIMEOUT=180000 \
         --shm-size=256m \
       quay.io/openshiftio/rhchestage-rh-che-e2e-tests:$TAG
@@ -194,6 +197,7 @@ else
       -e PASSWORD=$PASSWORD \
       -e URL=https://$HOST_URL \
       -e TEST_SUITE=test-all \
+      -e DEBUG_LEVEL="TRACE" \
       -e TS_SELENIUM_LOAD_PAGE_TIMEOUT=180000 \
       --shm-size=256m \
     quay.io/openshiftio/rhchestage-rh-che-e2e-tests:$TAG
