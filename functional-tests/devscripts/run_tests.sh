@@ -84,8 +84,7 @@ echo "User name printed in format: 3 first letters, space, the rest of letters. 
 set +e
 #PR CHECK
 if [[ "$PR_CHECK_BUILD" == "true" ]]; then
-  HOST_URL=$(echo ${RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL} | cut -d"/" -f 3)
-  echo "Running test against developer cluster. URL: $HOST_URL"
+  echo "Running test against developer cluster. URL: $RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL"
   CHE_OSIO_AUTH_ENDPOINT="https://auth.prod-preview.openshift.io"
   path="$(pwd)"
   
@@ -125,7 +124,7 @@ if [[ "$PR_CHECK_BUILD" == "true" ]]; then
      -v $path/e2e-saas/:/tmp/rh-che/local_tests:Z \
      -e USERNAME=$RH_CHE_AUTOMATION_CHE_PREVIEW_USERNAME \
      -e PASSWORD=$RH_CHE_AUTOMATION_CHE_PREVIEW_PASSWORD \
-     -e URL=http://$HOST_URL \
+     -e URL=$RH_CHE_AUTOMATION_SERVER_DEPLOYMENT_URL \
      -e TEST_SUITE=pr-check \
      -e DEBUG_LEVEL="TRACE" \
      -e TS_SELENIUM_LOAD_PAGE_TIMEOUT=180000 \
