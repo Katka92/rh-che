@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
+kill_ffmpeg(){
+  echo "Killing ffmpeg with PID=$ffmpeg_pid"
+  kill -2 "$ffmpeg_pid"
+  wait "$ffmpeg_pid"
+  cp $ffmpeg_path/* ./report/
+  exit $EXIT_CODE
+}
+
 # ------------------------------------------------------------------------------------------
 # ------------------------------- VALIDATE ALL REQUIRED PARAMETERS -------------------------
 # ------------------------------------------------------------------------------------------
@@ -34,6 +42,9 @@ fi
 if [ -z $DEBUG_LEVEL ]; then
   DEBUG_LEVEL="DEBUG"
 fi
+
+export DISPLAY=":20"
+export SCREEN="0"
 
 cd rh-che
 length=${#USERNAME}
@@ -135,10 +146,8 @@ do
 done
 
 echo "Running Xvfb"
-/usr/bin/Xvfb :1 -screen 0 1920x1080x24 +extension RANDR > /dev/null 2>&1 &
-
-x11vnc -display :1.0 > /dev/null 2>&1 &
-export DISPLAY=:1.0
+/usr/bin/Xvfb $DISPLAY -screen $SCREEN 1920x1080x16 > /dev/null 2>&1 &
+x11vnc -display $DISPLAY -N -forever > /dev/null 2>&1 &
 
 # ------------------------------------------------------------------------------------------
 #--------------------------------- APPLY PATCHES -------------------------------------------
@@ -179,5 +188,14 @@ fi
 echo "Installing upstream dependency."
 npm --silent i ../../e2e/
 
+# create a folder and record a video
+ffmpeg_path="./report/ffmpeg_report"
+mkdir -p $ffmpeg_path
+nohup ffmpeg -y -video_size 1920x1080 -framerate 24 -f x11grab -i $DISPLAY.$SCREEN $ffmpeg_path/output.mp4 2> $ffmpeg_path/ffmpeg_err.txt > $ffmpeg_path/ffmpeg_std.txt & 
+ffmpeg_pid=$!
+trap kill_ffmpeg 2 15
+
 echo "Running test suite: $TEST_SUITE"
 npm run $TEST_SUITE
+
+kill_ffmpeg
