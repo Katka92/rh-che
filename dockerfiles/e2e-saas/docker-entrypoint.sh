@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 set -e
 
-kill_ffmpeg(){
-  echo "In method kill_ffmpeg()"
+stopRecording(){
   echo "Killing ffmpeg with PID=$ffmpeg_pid"
   kill -2 "$ffmpeg_pid"
   set +e
   wait "$ffmpeg_pid"
-  echo "After a wait, ffmpeg process was successfully killed."  
   set -e
   return 0
 }
+
+startRecording() {
+  ffmpeg_path="./report/ffmpeg_report"
+  mkdir -p $ffmpeg_path
+  nohup ffmpeg -y -video_size 1920x1080 -framerate 24 -f x11grab -i $DISPLAY.$SCREEN $ffmpeg_path/output.mp4 2> $ffmpeg_path/ffmpeg_err.txt > $ffmpeg_path/ffmpeg_std.txt & 
+  ffmpeg_pid=$!
+  trap stopRecording 2 15
+}
+
 
 # ------------------------------------------------------------------------------------------
 # ------------------------------- VALIDATE ALL REQUIRED PARAMETERS -------------------------
@@ -179,12 +186,7 @@ fi
 echo "Installing upstream dependency."
 npm --silent i ../../e2e/
 
-# create a folder and record a video
-ffmpeg_path="./report/ffmpeg_report"
-mkdir -p $ffmpeg_path
-nohup ffmpeg -y -video_size 1920x1080 -framerate 24 -f x11grab -i $DISPLAY.$SCREEN $ffmpeg_path/output.mp4 2> $ffmpeg_path/ffmpeg_err.txt > $ffmpeg_path/ffmpeg_std.txt & 
-ffmpeg_pid=$!
-trap kill_ffmpeg 2 15
+startRecording
 
 set +e
 echo "Running test suite: $TEST_SUITE"
@@ -192,6 +194,10 @@ npm run $TEST_SUITE
 RESULT=$?
 set -e
 
-kill_ffmpeg
+stopRecording
+
+if [[ $RESULT == 0 ]]; then
+  rm -rf $ffmpeg_path
+fi
 echo "Exiting docker entrypoint with status $RESULT"
 exit $RESULT
