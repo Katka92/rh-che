@@ -5,6 +5,10 @@ kill_ffmpeg(){
   echo "In method kill_ffmpeg()"
   echo "Killing ffmpeg with PID=$ffmpeg_pid"
   kill -2 "$ffmpeg_pid"
+  set +e
+  wait "$ffmpeg_pid"
+  echo "After a wait, ffmpeg process was successfully killed."  
+  set -e
   return 0
 }
 
@@ -113,6 +117,14 @@ export TS_SELENIUM_BASE_URL=$URL
 export TS_SELENIUM_MULTIUSER=true
 export TS_SELENIUM_LOG_LEVEL=$DEBUG_LEVEL
 
+echo "Running Xvfb"
+
+export DISPLAY=:20
+export SCREEN="0"
+
+/usr/bin/Xvfb $DISPLAY -screen $SCREEN 1920x1080x16 +extension RANDR > /dev/null 2>&1 &
+x11vnc -display $DISPLAY -N -forever > /dev/null 2>&1 &
+
 # Launch selenium server
 /usr/bin/supervisord --configuration /etc/supervisord.conf & \
 export TS_SELENIUM_REMOTE_DRIVER_URL=http://localhost:4444/wd/hub
@@ -138,13 +150,6 @@ do
   sleep 1
 done
 
-echo "Running Xvfb"
-
-export DISPLAY=":20"
-export SCREEN="0"
-
-/usr/bin/Xvfb $DISPLAY -screen $SCREEN 1920x1080x24 > /dev/null 2>&1 &
-x11vnc -display $DISPLAY > /dev/null 2>&1 &
 
 # ------------------------------------------------------------------------------------------
 #----------------------------------- RUN TESTS ---------------------------------------------
@@ -181,9 +186,11 @@ nohup ffmpeg -y -video_size 1920x1080 -framerate 24 -f x11grab -i $DISPLAY.$SCRE
 ffmpeg_pid=$!
 trap kill_ffmpeg 2 15
 
+set +e
 echo "Running test suite: $TEST_SUITE"
 npm run $TEST_SUITE
 RESULT=$?
+set -e
 
 kill_ffmpeg
 echo "Exiting docker entrypoint with status $RESULT"
