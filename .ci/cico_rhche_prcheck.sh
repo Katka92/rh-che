@@ -22,7 +22,12 @@ eval "$(./env-toolkit load -f jenkins-env.json -r \
         ^JOB_NAME$ \
         ^ghprbPullId \
         ^RH_CHE \
-        ^GIT_COMMIT)"
+        ^GIT_COMMIT \
+        ghprbCommentBody)"
+
+echo $ghprbCommentBody;
+echo "${ghprbCommentBody%%"\r\n"*}"
+exit 1
 
 source ./config
 source .ci/functional_tests_utils.sh
