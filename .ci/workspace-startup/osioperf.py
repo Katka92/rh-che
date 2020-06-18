@@ -407,7 +407,7 @@ class OsioperfLocust(Locust):
     self.taskUserToken = _userTokens[_currentUser]
     self.taskUserName = _userNames[_currentUser]
     self.taskUserEnvironment = _userEnvironment[_currentUser]
-    print("Spawning user ["+str(self.taskUser)+"] on ["+self.taskUserEnvironment+"]")
+    print("Spawning user ["+str(self.taskUser)+"] on ["+self.taskUserEnvironment+"] from user count:"+str(_users))
     if _currentUser < _users - 1:
       _currentUser += 1
     else:
