@@ -74,4 +74,3 @@ Those tests can be run by commenting to a PR:
 | [Openshiftio pre-release tests](devtools-saas-openshiftio-pre-release-test) | server: che.prod-preview.openshift.io<br> test: [test image with versino as a tag](https://quay.io/repository/openshiftio/rhchestage-rh-che-e2e-tests) |  Run all tests that we have against prod-preview environment. |
 | [Build and push test image](https://ci.centos.org/view/Devtools/job/devtools-rh-che-build-func-dep/) | server: not used<br>test: [built, tagged and pushed](https://quay.io/repository/openshiftio/rhchestage-rh-che-e2e-tests)| When a PR is merged in rh-che repo, the test image is rebuild and pushed. |
 | [Cleanup job](https://ci.centos.org/view/Devtools/job/devtools-rh-che-prcheck-cleanup/) | server: no server<br>test: no image | Goes through deployments on dev cluster and preserves only the ones with open PRs (or whitelisted). |
-
